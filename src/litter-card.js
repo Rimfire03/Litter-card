@@ -4,13 +4,219 @@ const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace")
 const html = LitElement ? LitElement.prototype.html : (strings, ...values) => strings.raw[0];
 const css = LitElement ? LitElement.prototype.css : (strings, ...values) => strings.raw[0];
 
-// Fallback Lit definitions if LitElement is not directly exported
-const CARD_VERSION = "1.0.0";
+const CARD_VERSION = "1.1.0";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
   "color: #333; background: #e0e0e0; font-weight: 700; border-radius: 0 3px 3px 0;"
 );
+
+// Multilingual Translations Dictionary
+const TRANSLATIONS = {
+  fr: {
+    default_title: "Litière",
+    status_standby: "En attente",
+    status_cleaning: "Nettoyage en cours",
+    status_emptying: "Vidage en cours",
+    status_child_lock: "Sécurité enfants active",
+    status_sleep: "Veille",
+    status_smoothing: "Nivellement",
+    status_self_check: "Auto-vérification",
+    status_full: "Sac plein",
+    status_on: "Actif",
+    status_off: "Inactif",
+    status_ready: "Prêt",
+    status_occupied: "Occupé",
+    status_problem: "Erreur détectée",
+    cat_present: "Chat présent",
+    litter_free: "Libre",
+    bin_full_alert: "Sac plein !",
+    bin_ok: "Sac OK",
+    weight_tooltip: "Dernier poids mesuré",
+    stat_cleanings: "Nettoyages",
+    stat_visits: "Visites",
+    stat_duration: "Durée visite",
+    sec_controls: "Contrôles manuels",
+    btn_clean: "Nettoyer",
+    btn_level: "Niveler",
+    btn_bag_replace: "Remplacer sac",
+    btn_bag_changed: "Sac changé",
+    btn_restart: "Redémarrer",
+    sec_settings: "Paramètres & Configuration",
+    cfg_auto_clean: "Nettoyage automatique",
+    cfg_auto_clean_desc: "Déclencher un cycle après chaque visite",
+    cfg_deep_clean: "Nettoyage intensif",
+    cfg_deep_clean_desc: "Cycle approfondi de rotation du tambour",
+    cfg_odor_removal: "Désodorisation",
+    cfg_odor_removal_desc: "Activer après chaque cycle de nettoyage",
+    cfg_child_lock: "Sécurité enfants",
+    cfg_child_lock_desc: "Verrouille les boutons physiques",
+    cfg_clean_wait_time: "Délai avant nettoyage",
+    cfg_clean_interval: "Intervalle de nettoyage",
+    cfg_bin_calibration: "Alerte sac plein",
+    cfg_litter_type: "Type de litière",
+    cfg_unit: "Unité de masse",
+    unit_min: "min",
+    unit_cycles: "cycles",
+    not_configured: "-- Non configuré --",
+  },
+  en: {
+    default_title: "Cat Litter Box",
+    status_standby: "Standby",
+    status_cleaning: "Cleaning",
+    status_emptying: "Emptying",
+    status_child_lock: "Child lock active",
+    status_sleep: "Sleep",
+    status_smoothing: "Leveling",
+    status_self_check: "Self-check",
+    status_full: "Bag full",
+    status_on: "Active",
+    status_off: "Inactive",
+    status_ready: "Ready",
+    status_occupied: "Occupied",
+    status_problem: "Problem detected",
+    cat_present: "Cat inside",
+    litter_free: "Clear",
+    bin_full_alert: "Bag full!",
+    bin_ok: "Bag OK",
+    weight_tooltip: "Last measured weight",
+    stat_cleanings: "Cleanings",
+    stat_visits: "Visits",
+    stat_duration: "Visit duration",
+    sec_controls: "Manual controls",
+    btn_clean: "Clean",
+    btn_level: "Level",
+    btn_bag_replace: "Replace bag",
+    btn_bag_changed: "Bag changed",
+    btn_restart: "Restart",
+    sec_settings: "Settings & Configuration",
+    cfg_auto_clean: "Auto clean",
+    cfg_auto_clean_desc: "Trigger a cycle after each visit",
+    cfg_deep_clean: "Deep clean",
+    cfg_deep_clean_desc: "Thorough drum rotation cycle",
+    cfg_odor_removal: "Odor removal",
+    cfg_odor_removal_desc: "Activate after each cleaning cycle",
+    cfg_child_lock: "Child lock",
+    cfg_child_lock_desc: "Lock physical buttons",
+    cfg_clean_wait_time: "Clean delay",
+    cfg_clean_interval: "Cleaning interval",
+    cfg_bin_calibration: "Bin full alert",
+    cfg_litter_type: "Litter type",
+    cfg_unit: "Mass unit",
+    unit_min: "min",
+    unit_cycles: "cycles",
+    not_configured: "-- Not configured --",
+  },
+  de: {
+    default_title: "Katzenklo",
+    status_standby: "Bereit",
+    status_cleaning: "Reinigung läuft",
+    status_emptying: "Entleerung läuft",
+    status_child_lock: "Kindersicherung aktiv",
+    status_sleep: "Ruhemodus",
+    status_smoothing: "Einebnen",
+    status_self_check: "Selbsttest",
+    status_full: "Beutel voll",
+    status_on: "Aktiv",
+    status_off: "Inaktiv",
+    status_ready: "Bereit",
+    status_occupied: "Besetzt",
+    status_problem: "Fehler erkannt",
+    cat_present: "Katze anwesend",
+    litter_free: "Frei",
+    bin_full_alert: "Beutel voll!",
+    bin_ok: "Beutel OK",
+    weight_tooltip: "Zuletzt gemessenes Gewicht",
+    stat_cleanings: "Reinigungen",
+    stat_visits: "Besuche",
+    stat_duration: "Besuchsdauer",
+    sec_controls: "Manuelle Steuerung",
+    btn_clean: "Reinigen",
+    btn_level: "Einebnen",
+    btn_bag_replace: "Beutel wechseln",
+    btn_bag_changed: "Beutel gewechselt",
+    btn_restart: "Neustarten",
+    sec_settings: "Einstellungen & Konfiguration",
+    cfg_auto_clean: "Automatische Reinigung",
+    cfg_auto_clean_desc: "Zyklus nach jedem Besuch starten",
+    cfg_deep_clean: "Intensivreinigung",
+    cfg_deep_clean_desc: "Gründlicher Trommeldrehzyklus",
+    cfg_odor_removal: "Geruchsbeseitigung",
+    cfg_odor_removal_desc: "Nach jedem Reinigungszyklus aktivieren",
+    cfg_child_lock: "Kindersicherung",
+    cfg_child_lock_desc: "Physische Tasten sperren",
+    cfg_clean_wait_time: "Verzögerung vor Reinigung",
+    cfg_clean_interval: "Reinigungsintervall",
+    cfg_bin_calibration: "Beutel-Voll-Warnung",
+    cfg_litter_type: "Katzenstreu-Typ",
+    cfg_unit: "Gewichtseinheit",
+    unit_min: "Min.",
+    unit_cycles: "Zyklen",
+    not_configured: "-- Nicht konfiguriert --",
+  },
+  es: {
+    default_title: "Arenero Gatos",
+    status_standby: "En espera",
+    status_cleaning: "Limpiando",
+    status_emptying: "Vaciando",
+    status_child_lock: "Bloqueo infantil activo",
+    status_sleep: "Modo reposo",
+    status_smoothing: "Nivelando",
+    status_self_check: "Autocomprobación",
+    status_full: "Bolsa llena",
+    status_on: "Activo",
+    status_off: "Inactivo",
+    status_ready: "Listo",
+    status_occupied: "Ocupado",
+    status_problem: "Error detectado",
+    cat_present: "Gato dentro",
+    litter_free: "Libre",
+    bin_full_alert: "¡Bolsa llena!",
+    bin_ok: "Bolsa OK",
+    weight_tooltip: "Último peso medido",
+    stat_cleanings: "Limpiezas",
+    stat_visits: "Visitas",
+    stat_duration: "Duración visita",
+    sec_controls: "Controles manuales",
+    btn_clean: "Limpiar",
+    btn_level: "Nivelar",
+    btn_bag_replace: "Reemplazar bolsa",
+    btn_bag_changed: "Bolsa cambiada",
+    btn_restart: "Reiniciar",
+    sec_settings: "Ajustes y Configuración",
+    cfg_auto_clean: "Limpieza automática",
+    cfg_auto_clean_desc: "Iniciar un ciclo después de cada visita",
+    cfg_deep_clean: "Limpieza profunda",
+    cfg_deep_clean_desc: "Ciclo exhaustivo de rotación del tambor",
+    cfg_odor_removal: "Desodorización",
+    cfg_odor_removal_desc: "Activar tras cada ciclo de limpieza",
+    cfg_child_lock: "Bloqueo infantil",
+    cfg_child_lock_desc: "Bloquea los botones físicos",
+    cfg_clean_wait_time: "Retraso antes de limpiar",
+    cfg_clean_interval: "Intervalo de limpieza",
+    cfg_bin_calibration: "Alerta bolsa llena",
+    cfg_litter_type: "Tipo de arena",
+    cfg_unit: "Unidad de masa",
+    unit_min: "min",
+    unit_cycles: "ciclos",
+    not_configured: "-- No configurado --",
+  },
+};
+
+function getLanguage(config, hass) {
+  if (config && config.language && TRANSLATIONS[config.language]) {
+    return config.language;
+  }
+  const lang = (hass && (hass.locale?.language || hass.language || "en"))
+    .substring(0, 2)
+    .toLowerCase();
+  return TRANSLATIONS[lang] ? lang : "en";
+}
+
+function t(key, lang = "en") {
+  const dict = TRANSLATIONS[lang] || TRANSLATIONS.en;
+  return dict[key] || TRANSLATIONS.en[key] || key;
+}
 
 class LitterCard extends HTMLElement {
   constructor() {
@@ -23,8 +229,9 @@ class LitterCard extends HTMLElement {
 
   setConfig(config) {
     this._config = {
-      title: "Litière",
+      title: "",
       image: "",
+      language: "",
       ...config,
       // Entities mappings
       // Buttons
@@ -165,25 +372,27 @@ class LitterCard extends HTMLElement {
     return `${min}m ${remainSec}s`;
   }
 
-  _formatStatus(stateStr) {
-    if (!stateStr) return "En attente";
+  _formatStatus(stateStr, lang) {
+    if (!stateStr) return t("status_standby", lang);
     const map = {
-      standby: "En attente",
-      cleaning: "Nettoyage en cours",
-      emptying: "Vidage en cours",
-      "child lock": "Sécurité enfants active",
-      sleep: "Veille",
-      smoothing: "Nivellement",
-      "self check": "Auto-vérification",
-      full: "Sac plein",
-      on: "Actif",
-      off: "Inactif",
+      standby: t("status_standby", lang),
+      cleaning: t("status_cleaning", lang),
+      emptying: t("status_emptying", lang),
+      "child lock": t("status_child_lock", lang),
+      sleep: t("status_sleep", lang),
+      smoothing: t("status_smoothing", lang),
+      "self check": t("status_self_check", lang),
+      full: t("status_full", lang),
+      on: t("status_on", lang),
+      off: t("status_off", lang),
     };
     return map[stateStr.toLowerCase()] || stateStr;
   }
 
   _render() {
     if (!this.shadowRoot) return;
+
+    const lang = getLanguage(this._config, this._hass);
 
     // Sensors states
     const occState = this._getState(this._config.sensor_occupancy);
@@ -204,7 +413,7 @@ class LitterCard extends HTMLElement {
     const hasProblem = problemState && (problemState.state === "on" || problemState.state === "problem");
 
     const statusState = this._getState(this._config.sensor_status);
-    const statusText = statusState ? this._formatStatus(statusState.state) : (isOccupied ? "Occupé" : "Prêt");
+    const statusText = statusState ? this._formatStatus(statusState.state, lang) : (isOccupied ? t("status_occupied", lang) : t("status_ready", lang));
 
     const cleaningsState = this._getState(this._config.sensor_cleanings_count);
     const visitsState = this._getState(this._config.sensor_total_visits);
@@ -214,24 +423,26 @@ class LitterCard extends HTMLElement {
     const imgSrc = this._config.image || DEFAULT_IMAGE;
 
     // Buttons presence
-    const hasBtnClean = !!this._config.btn_clean;
-    const hasBtnLevel = !!this._config.btn_level;
-    const hasBtnRestart = !!this._config.btn_restart;
-    const hasBtnBagReplace = !!this._config.btn_bag_replace;
-    const hasBtnBagChanged = !!this._config.btn_bag_changed;
+    const hasBtnClean = !this._config.btn_clean;
+    const hasBtnLevel = !this._config.btn_level;
+    const hasBtnRestart = !this._config.btn_restart;
+    const hasBtnBagReplace = !this._config.btn_bag_replace;
+    const hasBtnBagChanged = !this._config.btn_bag_changed;
     const hasAnyButtons = hasBtnClean || hasBtnLevel || hasBtnRestart || hasBtnBagReplace || hasBtnBagChanged;
 
     // Config presence
-    const hasCfgCalib = !!this._config.cfg_bin_calibration;
-    const hasCfgWait = !!this._config.cfg_clean_wait_time;
-    const hasCfgOdor = !!this._config.cfg_odor_removal;
-    const hasCfgInterval = !!this._config.cfg_clean_interval;
-    const hasCfgAuto = !!this._config.cfg_auto_clean;
-    const hasCfgDeep = !!this._config.cfg_deep_clean;
-    const hasCfgChildLock = !!this._config.cfg_child_lock;
-    const hasCfgLitterType = !!this._config.cfg_litter_type;
-    const hasCfgUnit = !!this._config.cfg_unit;
+    const hasCfgCalib = !this._config.cfg_bin_calibration;
+    const hasCfgWait = !this._config.cfg_clean_wait_time;
+    const hasCfgOdor = !this._config.cfg_odor_removal;
+    const hasCfgInterval = !this._config.cfg_clean_interval;
+    const hasCfgAuto = !this._config.cfg_auto_clean;
+    const hasCfgDeep = !this._config.cfg_deep_clean;
+    const hasCfgChildLock = !this._config.cfg_child_lock;
+    const hasCfgLitterType = !this._config.cfg_litter_type;
+    const hasCfgUnit = !this._config.cfg_unit;
     const hasAnyConfig = hasCfgCalib || hasCfgWait || hasCfgOdor || hasCfgInterval || hasCfgAuto || hasCfgDeep || hasCfgChildLock || hasCfgLitterType || hasCfgUnit;
+
+    const cardTitle = this._config.title || t("default_title", lang);
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -648,7 +859,7 @@ class LitterCard extends HTMLElement {
         <div class="header">
           <div class="title-group">
             <ha-icon icon="mdi:cat" style="color: var(--primary-color, #0284c7);"></ha-icon>
-            <div class="title">${this._config.title || "Litière"}</div>
+            <div class="title">${cardTitle}</div>
           </div>
           <div class="status-badge">
             <div class="status-dot"></div>
@@ -658,13 +869,13 @@ class LitterCard extends HTMLElement {
 
         <!-- Main Image Visual with Dynamic Overlays -->
         <div class="image-container">
-          <img class="litter-img" src="${imgSrc}" alt="Litière Automatique" />
+          <img class="litter-img" src="${imgSrc}" alt="${cardTitle}" />
 
           <!-- Entrance Light / Occupancy Indicator (Green = Occupied, Red = Clear/Standby) -->
           <div class="entrance-glow">
             <div class="entrance-badge">
               <ha-icon icon="${isOccupied ? 'mdi:cat' : 'mdi:check-circle'}" style="--mdc-icon-size: 14px;"></ha-icon>
-              <span>${isOccupied ? 'Chat présent' : 'Libre'}</span>
+              <span>${isOccupied ? t("cat_present", lang) : t("litter_free", lang)}</span>
             </div>
           </div>
 
@@ -672,13 +883,13 @@ class LitterCard extends HTMLElement {
           ${this._config.sensor_bin_full ? `
             <div class="bin-status-overlay">
               <ha-icon icon="${isBinFull ? 'mdi:delete-alert' : 'mdi:delete-outline'}" style="--mdc-icon-size: 16px;"></ha-icon>
-              <span>${isBinFull ? 'Sac plein !' : 'Sac OK'}</span>
+              <span>${isBinFull ? t("bin_full_alert", lang) : t("bin_ok", lang)}</span>
             </div>
           ` : ''}
 
           <!-- Cat Weight in bottom black circular area -->
           ${this._config.sensor_cat_weight ? `
-            <div class="weight-overlay" title="Dernier poids mesuré">
+            <div class="weight-overlay" title="${t("weight_tooltip", lang)}">
               <div class="weight-value">${weightVal}</div>
               <div class="weight-unit">${weightUnit}</div>
             </div>
@@ -692,7 +903,7 @@ class LitterCard extends HTMLElement {
               <div class="stat-item">
                 <ha-icon icon="mdi:broom" class="stat-icon" style="--mdc-icon-size: 18px;"></ha-icon>
                 <div class="stat-val">${cleaningsState.state}</div>
-                <div class="stat-lbl">Nettoyages</div>
+                <div class="stat-lbl">${t("stat_cleanings", lang)}</div>
               </div>
             ` : ''}
 
@@ -700,7 +911,7 @@ class LitterCard extends HTMLElement {
               <div class="stat-item">
                 <ha-icon icon="mdi:counter" class="stat-icon" style="--mdc-icon-size: 18px;"></ha-icon>
                 <div class="stat-val">${visitsState.state}</div>
-                <div class="stat-lbl">Visites</div>
+                <div class="stat-lbl">${t("stat_visits", lang)}</div>
               </div>
             ` : ''}
 
@@ -708,7 +919,7 @@ class LitterCard extends HTMLElement {
               <div class="stat-item">
                 <ha-icon icon="mdi:timer-sand" class="stat-icon" style="--mdc-icon-size: 18px;"></ha-icon>
                 <div class="stat-val">${this._formatDuration(durationState.state)}</div>
-                <div class="stat-lbl">Durée visite</div>
+                <div class="stat-lbl">${t("stat_duration", lang)}</div>
               </div>
             ` : ''}
           </div>
@@ -717,40 +928,40 @@ class LitterCard extends HTMLElement {
         <!-- Manual Action Buttons -->
         ${hasAnyButtons ? `
           <div class="actions-section">
-            <div class="section-title">Contrôles manuels</div>
+            <div class="section-title">${t("sec_controls", lang)}</div>
             <div class="buttons-grid">
               ${hasBtnClean ? `
                 <button class="action-btn" id="btn_clean">
                   <ha-icon icon="mdi:shimmer" style="--mdc-icon-size: 18px;"></ha-icon>
-                  <span>Nettoyer</span>
+                  <span>${t("btn_clean", lang)}</span>
                 </button>
               ` : ''}
 
               ${hasBtnLevel ? `
                 <button class="action-btn secondary" id="btn_level">
                   <ha-icon icon="mdi:arrow-collapse-down" style="--mdc-icon-size: 18px;"></ha-icon>
-                  <span>Niveler</span>
+                  <span>${t("btn_level", lang)}</span>
                 </button>
               ` : ''}
 
               ${hasBtnBagReplace ? `
                 <button class="action-btn secondary" id="btn_bag_replace">
                   <ha-icon icon="mdi:sack" style="--mdc-icon-size: 18px;"></ha-icon>
-                  <span>Remplacer sac</span>
+                  <span>${t("btn_bag_replace", lang)}</span>
                 </button>
               ` : ''}
 
               ${hasBtnBagChanged ? `
                 <button class="action-btn secondary" id="btn_bag_changed">
                   <ha-icon icon="mdi:delete-empty" style="--mdc-icon-size: 18px;"></ha-icon>
-                  <span>Sac changé</span>
+                  <span>${t("btn_bag_changed", lang)}</span>
                 </button>
               ` : ''}
 
               ${hasBtnRestart ? `
                 <button class="action-btn warning" id="btn_restart">
                   <ha-icon icon="mdi:restart" style="--mdc-icon-size: 18px;"></ha-icon>
-                  <span>Redémarrer</span>
+                  <span>${t("btn_restart", lang)}</span>
                 </button>
               ` : ''}
             </div>
@@ -763,38 +974,38 @@ class LitterCard extends HTMLElement {
             <div class="config-header" id="config-toggle">
               <div class="config-header-title">
                 <ha-icon icon="mdi:cog-outline" style="--mdc-icon-size: 18px; color: var(--secondary-text-color, #64748b);"></ha-icon>
-                <span>Paramètres & Configuration</span>
+                <span>${t("sec_settings", lang)}</span>
               </div>
               <ha-icon icon="mdi:chevron-down" class="chevron ${this._configOpen ? 'open' : ''}" style="--mdc-icon-size: 20px;"></ha-icon>
             </div>
 
             <div class="config-body">
               <!-- Nettoyage automatique -->
-              ${hasCfgAuto ? this._renderSwitchRow("cfg_auto_clean", "Nettoyage automatique", "Déclencher un cycle après chaque visite") : ''}
+              ${hasCfgAuto ? this._renderSwitchRow("cfg_auto_clean", t("cfg_auto_clean", lang), t("cfg_auto_clean_desc", lang)) : ''}
 
               <!-- Nettoyage intensif -->
-              ${hasCfgDeep ? this._renderSwitchRow("cfg_deep_clean", "Nettoyage intensif", "Cycle approfondi de rotation du tambour") : ''}
+              ${hasCfgDeep ? this._renderSwitchRow("cfg_deep_clean", t("cfg_deep_clean", lang), t("cfg_deep_clean_desc", lang)) : ''}
 
               <!-- Désodorisation après nettoyage -->
-              ${hasCfgOdor ? this._renderSwitchRow("cfg_odor_removal", "Désodorisation", "Activer après chaque cycle de nettoyage") : ''}
+              ${hasCfgOdor ? this._renderSwitchRow("cfg_odor_removal", t("cfg_odor_removal", lang), t("cfg_odor_removal_desc", lang)) : ''}
 
               <!-- Sécurité enfants -->
-              ${hasCfgChildLock ? this._renderLockRow("cfg_child_lock", "Sécurité enfants", "Verrouille les boutons physiques") : ''}
+              ${hasCfgChildLock ? this._renderLockRow("cfg_child_lock", t("cfg_child_lock", lang), t("cfg_child_lock_desc", lang)) : ''}
 
               <!-- Délai de nettoyage -->
-              ${hasCfgWait ? this._renderSliderRow("cfg_clean_wait_time", "Délai avant nettoyage", "min", 0, 60, 1) : ''}
+              ${hasCfgWait ? this._renderSliderRow("cfg_clean_wait_time", t("cfg_clean_wait_time", lang), t("unit_min", lang), 0, 60, 1) : ''}
 
               <!-- Intervalle de nettoyage -->
-              ${hasCfgInterval ? this._renderSliderRow("cfg_clean_interval", "Intervalle de nettoyage", "min", 0, 120, 5) : ''}
+              ${hasCfgInterval ? this._renderSliderRow("cfg_clean_interval", t("cfg_clean_interval", lang), t("unit_min", lang), 0, 120, 5) : ''}
 
               <!-- Calibration sac plein -->
-              ${hasCfgCalib ? this._renderSliderRow("cfg_bin_calibration", "Alerte sac plein (cycles)", "cycles", 15, 35, 1) : ''}
+              ${hasCfgCalib ? this._renderSliderRow("cfg_bin_calibration", t("cfg_bin_calibration", lang), t("unit_cycles", lang), 15, 35, 1) : ''}
 
               <!-- Type de litière -->
-              ${hasCfgLitterType ? this._renderSelectRow("cfg_litter_type", "Type de litière") : ''}
+              ${hasCfgLitterType ? this._renderSelectRow("cfg_litter_type", t("cfg_litter_type", lang)) : ''}
 
               <!-- Unité -->
-              ${hasCfgUnit ? this._renderSelectRow("cfg_unit", "Unité de masse") : ''}
+              ${hasCfgUnit ? this._renderSelectRow("cfg_unit", t("cfg_unit", lang)) : ''}
             </div>
           </div>
         ` : ''}
@@ -950,7 +1161,6 @@ class LitterCard extends HTMLElement {
   }
 
   static getStubConfig(hass) {
-    // Auto-detect entities matching litter box pattern
     const entities = Object.keys(hass.states);
     const findEntity = (pattern) => entities.find(e => e.includes(pattern));
 
@@ -1026,36 +1236,50 @@ class LitterCardEditor extends HTMLElement {
   _render() {
     if (!this.shadowRoot || !this._hass) return;
 
+    const lang = getLanguage(this._config, this._hass);
+
     const fields = [
-      { key: "title", label: "Titre de la carte", type: "text" },
-      { key: "image", label: "URL de l'image (optionnel)", type: "text" },
-      // Boutons
-      { header: "Boutons de commande" },
-      { key: "btn_clean", label: "Bouton Nettoyer" },
-      { key: "btn_level", label: "Bouton Niveler" },
-      { key: "btn_bag_replace", label: "Bouton Remplacement sac" },
-      { key: "btn_bag_changed", label: "Bouton Sac changé" },
-      { key: "btn_restart", label: "Bouton Redémarrer" },
-      // Capteurs
-      { header: "Capteurs" },
-      { key: "sensor_occupancy", label: "Capteur d'occupation (Entrée verte/rouge)" },
-      { key: "sensor_cat_weight", label: "Poids du chat (Rond noir)" },
-      { key: "sensor_bin_full", label: "Capteur Sac plein" },
-      { key: "sensor_status", label: "État général de la litière" },
-      { key: "sensor_cleanings_count", label: "Nombre de nettoyages" },
-      { key: "sensor_total_visits", label: "Nombre total de visites" },
-      { key: "sensor_visit_duration", label: "Durée de la visite" },
+      { key: "title", label: lang === "fr" ? "Titre de la carte" : lang === "de" ? "Kartentitel" : lang === "es" ? "Título de la tarjeta" : "Card title", type: "text" },
+      { key: "image", label: lang === "fr" ? "URL de l'image (optionnel)" : lang === "de" ? "Bild-URL (optional)" : lang === "es" ? "URL de imagen (opcional)" : "Image URL (optional)", type: "text" },
+      {
+        key: "language",
+        label: lang === "fr" ? "Langue (optionnel)" : lang === "de" ? "Sprache (optional)" : lang === "es" ? "Idioma (opcional)" : "Language (optional)",
+        type: "select_options",
+        options: [
+          { value: "", label: lang === "fr" ? "Auto (Détection Home Assistant)" : "Auto (Home Assistant Language)" },
+          { value: "fr", label: "Français (FR)" },
+          { value: "en", label: "English (EN)" },
+          { value: "de", label: "Deutsch (DE)" },
+          { value: "es", label: "Español (ES)" },
+        ]
+      },
+      // Buttons
+      { header: t("sec_controls", lang) },
+      { key: "btn_clean", label: `${t("btn_clean", lang)} (Button)` },
+      { key: "btn_level", label: `${t("btn_level", lang)} (Button)` },
+      { key: "btn_bag_replace", label: `${t("btn_bag_replace", lang)} (Button)` },
+      { key: "btn_bag_changed", label: `${t("btn_bag_changed", lang)} (Button)` },
+      { key: "btn_restart", label: `${t("btn_restart", lang)} (Button)` },
+      // Sensors
+      { header: lang === "fr" ? "Capteurs" : lang === "de" ? "Sensoren" : lang === "es" ? "Sensores" : "Sensors" },
+      { key: "sensor_occupancy", label: `${t("cat_present", lang)} / ${t("litter_free", lang)} (Binary Sensor)` },
+      { key: "sensor_cat_weight", label: `${t("weight_tooltip", lang)} (Sensor)` },
+      { key: "sensor_bin_full", label: `${t("bin_full_alert", lang)} (Binary Sensor)` },
+      { key: "sensor_status", label: lang === "fr" ? "État général" : lang === "de" ? "Allgemeiner Status" : lang === "es" ? "Estado general" : "General Status (Sensor)" },
+      { key: "sensor_cleanings_count", label: `${t("stat_cleanings", lang)} (Sensor)` },
+      { key: "sensor_total_visits", label: `${t("stat_visits", lang)} (Sensor)` },
+      { key: "sensor_visit_duration", label: `${t("stat_duration", lang)} (Sensor)` },
       // Configuration
-      { header: "Paramètres & Options" },
-      { key: "cfg_auto_clean", label: "Nettoyage automatique" },
-      { key: "cfg_deep_clean", label: "Nettoyage intensif" },
-      { key: "cfg_odor_removal", label: "Désodorisation après nettoyage" },
-      { key: "cfg_child_lock", label: "Sécurité enfants" },
-      { key: "cfg_clean_wait_time", label: "Délai de nettoyage" },
-      { key: "cfg_clean_interval", label: "Intervalle de nettoyage" },
-      { key: "cfg_bin_calibration", label: "Calibration / Alerte sac plein" },
-      { key: "cfg_litter_type", label: "Type de litière (sélecteur)" },
-      { key: "cfg_unit", label: "Unité de masse" },
+      { header: t("sec_settings", lang) },
+      { key: "cfg_auto_clean", label: `${t("cfg_auto_clean", lang)} (Switch)` },
+      { key: "cfg_deep_clean", label: `${t("cfg_deep_clean", lang)} (Switch)` },
+      { key: "cfg_odor_removal", label: `${t("cfg_odor_removal", lang)} (Switch)` },
+      { key: "cfg_child_lock", label: `${t("cfg_child_lock", lang)} (Lock / Switch)` },
+      { key: "cfg_clean_wait_time", label: `${t("cfg_clean_wait_time", lang)} (Number)` },
+      { key: "cfg_clean_interval", label: `${t("cfg_clean_interval", lang)} (Number)` },
+      { key: "cfg_bin_calibration", label: `${t("cfg_bin_calibration", lang)} (Number)` },
+      { key: "cfg_litter_type", label: `${t("cfg_litter_type", lang)} (Select)` },
+      { key: "cfg_unit", label: `${t("cfg_unit", lang)} (Select)` },
     ];
 
     const entities = Object.keys(this._hass.states).sort();
@@ -1108,11 +1332,21 @@ class LitterCardEditor extends HTMLElement {
               </div>
             `;
           }
+          if (field.type === "select_options") {
+            return `
+              <div class="row">
+                <span class="label">${field.label}</span>
+                <select .configValue="${field.key}" id="${field.key}">
+                  ${field.options.map(opt => `<option value="${opt.value}" ${this._config[field.key] === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('')}
+                </select>
+              </div>
+            `;
+          }
           return `
             <div class="row">
               <span class="label">${field.label}</span>
               <select .configValue="${field.key}" id="${field.key}">
-                <option value="">-- Non configuré --</option>
+                <option value="">${t("not_configured", lang)}</option>
                 ${entities.map(e => `<option value="${e}" ${this._config[field.key] === e ? 'selected' : ''}>${e} (${this._hass.states[e].attributes.friendly_name || e})</option>`).join('')}
               </select>
             </div>
@@ -1145,5 +1379,5 @@ window.customCards.push({
   type: "litter-card",
   name: "Litter Card",
   preview: true,
-  description: "Carte Lovelace élégante pour litière automatique générique avec retour visuel d'occupation, poids et alertes.",
+  description: "Modern & customizable Lovelace card for generic automatic cat litter boxes with occupancy, weight display, and alerts.",
 });
