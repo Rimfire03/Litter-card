@@ -143,6 +143,17 @@ cfg_unit: select.cat_litter_box_unit
 | `cfg_bin_calibration` | Number entity | Full bin calibration threshold (cycles) |
 | `cfg_litter_type` | Select entity | Litter type selector (e.g. Mineral, Mixed) |
 | `cfg_unit` | Select entity | Weight unit selector (kg / lb) |
+| `entrance_pos_x` | Number (%) | Custom X position of the entrance halo (default: 50) |
+| `entrance_pos_y` | Number (%) | Custom Y position of the entrance halo (default: 41.5) |
+| `entrance_width` | Number (%) | Custom width of the entrance halo (default: 48) |
+| `entrance_height` | Number (%) | Custom height of the entrance halo (default: 31) |
+| `entrance_shape` | String | Shape of the entrance halo (`circle`, `ellipse`, `rounded`, `square`) |
+| `weight_pos_x` | Number (%) | Custom X position of the weight overlay (default: 83.1) |
+| `weight_pos_y` | Number (%) | Custom Y position of the weight overlay (default: 77.8) |
+| `weight_size` | Number (rem) | Font size for cat weight text (default: 1.15) |
+| `bin_pos_x` | Number (%) | Custom X position of the waste bin alert (default: 85) |
+| `bin_pos_y` | Number (%) | Custom Y position of the waste bin alert (default: 14) |
+| `bin_scale` | Number | Scale multiplier for waste bin alert (default: 1) |
 
 ---
 

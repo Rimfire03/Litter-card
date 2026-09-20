@@ -1,6 +1,6 @@
 import { DEFAULT_IMAGE } from './image-data.js';
 
-const CARD_VERSION = "0.09";
+const CARD_VERSION = "0.10";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -60,6 +60,22 @@ const TRANSLATIONS = {
     language_label: "Langue (optionnel)",
     auto_lang: "Automatique (Langue Home Assistant)",
     sensors_header: "Capteurs d'état & Mesures",
+    sec_positioning: "Ajustement & Personnalisation de l'image",
+    opt_entrance_pos_x: "Position X de l'entrée (%)",
+    opt_entrance_pos_y: "Position Y de l'entrée (%)",
+    opt_entrance_width: "Largeur de l'entrée (%)",
+    opt_entrance_height: "Hauteur de l'entrée (%)",
+    opt_entrance_shape: "Forme de l'entrée",
+    opt_weight_pos_x: "Position X du poids (%)",
+    opt_weight_pos_y: "Position Y du poids (%)",
+    opt_weight_size: "Taille du texte poids (rem)",
+    opt_bin_pos_x: "Position X alerte sac (%)",
+    opt_bin_pos_y: "Position Y alerte sac (%)",
+    opt_bin_scale: "Échelle alerte sac",
+    shape_circle: "Cercle",
+    shape_ellipse: "Ellipse",
+    shape_rounded: "Rectangle arrondi",
+    shape_square: "Rectangle",
   },
   en: {
     default_title: "Cat Litter Box",
@@ -112,6 +128,22 @@ const TRANSLATIONS = {
     language_label: "Language (optional)",
     auto_lang: "Auto (Home Assistant Language)",
     sensors_header: "Sensors & Metrics",
+    sec_positioning: "Image Overlay Customization & Positioning",
+    opt_entrance_pos_x: "Entrance Position X (%)",
+    opt_entrance_pos_y: "Entrance Position Y (%)",
+    opt_entrance_width: "Entrance Width (%)",
+    opt_entrance_height: "Entrance Height (%)",
+    opt_entrance_shape: "Entrance Shape",
+    opt_weight_pos_x: "Weight Position X (%)",
+    opt_weight_pos_y: "Weight Position Y (%)",
+    opt_weight_size: "Weight font size (rem)",
+    opt_bin_pos_x: "Bin Alert Position X (%)",
+    opt_bin_pos_y: "Bin Alert Position Y (%)",
+    opt_bin_scale: "Bin Alert Scale",
+    shape_circle: "Circle",
+    shape_ellipse: "Ellipse",
+    shape_rounded: "Rounded rectangle",
+    shape_square: "Rectangle",
   },
   de: {
     default_title: "Katzenklo",
@@ -164,6 +196,22 @@ const TRANSLATIONS = {
     language_label: "Sprache (optional)",
     auto_lang: "Automatisch (Home Assistant Sprache)",
     sensors_header: "Sensoren & Messwerte",
+    sec_positioning: "Bildanpassung & Positionierung",
+    opt_entrance_pos_x: "Eingang Position X (%)",
+    opt_entrance_pos_y: "Eingang Position Y (%)",
+    opt_entrance_width: "Eingang Breite (%)",
+    opt_entrance_height: "Eingang Höhe (%)",
+    opt_entrance_shape: "Eingangsform",
+    opt_weight_pos_x: "Gewicht Position X (%)",
+    opt_weight_pos_y: "Gewicht Position Y (%)",
+    opt_weight_size: "Gewicht Schriftgröße (rem)",
+    opt_bin_pos_x: "Beutel-Warnung Position X (%)",
+    opt_bin_pos_y: "Beutel-Warnung Position Y (%)",
+    opt_bin_scale: "Beutel-Warnung Skalierung",
+    shape_circle: "Kreis",
+    shape_ellipse: "Ellipse",
+    shape_rounded: "Abgerundetes Rechteck",
+    shape_square: "Rechteck",
   },
   es: {
     default_title: "Arenero Gatos",
@@ -216,6 +264,22 @@ const TRANSLATIONS = {
     language_label: "Idioma (opcional)",
     auto_lang: "Automático (Idioma Home Assistant)",
     sensors_header: "Sensores y Métricas",
+    sec_positioning: "Ajuste y Personalización de la imagen",
+    opt_entrance_pos_x: "Posición X de la entrada (%)",
+    opt_entrance_pos_y: "Posición Y de la entrada (%)",
+    opt_entrance_width: "Ancho de la entrada (%)",
+    opt_entrance_height: "Alto de la entrada (%)",
+    opt_entrance_shape: "Forma de la entrada",
+    opt_weight_pos_x: "Posición X del peso (%)",
+    opt_weight_pos_y: "Posición Y del peso (%)",
+    opt_weight_size: "Tamaño fuente peso (rem)",
+    opt_bin_pos_x: "Posición X alerta bolsa (%)",
+    opt_bin_pos_y: "Posición Y alerta bolsa (%)",
+    opt_bin_scale: "Escala alerta bolsa",
+    shape_circle: "Círculo",
+    shape_ellipse: "Elipse",
+    shape_rounded: "Rectángulo redondeado",
+    shape_square: "Rectángulo",
   },
 };
 
@@ -406,6 +470,24 @@ class LitterCard extends HTMLElement {
     // Image source
     const imgSrc = this._config.image || DEFAULT_IMAGE;
 
+    // Overlay Customizable Geometry
+    const entranceX = this._config.entrance_pos_x ?? 50;
+    const entranceY = this._config.entrance_pos_y ?? 41.5;
+    const entranceW = this._config.entrance_width ?? 48;
+    const entranceH = this._config.entrance_height ?? 31;
+    const entranceShape = this._config.entrance_shape || "circle";
+    let entranceBorderRadius = "50%";
+    if (entranceShape === "rounded") entranceBorderRadius = "24px";
+    if (entranceShape === "square") entranceBorderRadius = "8px";
+
+    const weightX = this._config.weight_pos_x ?? 83.1;
+    const weightY = this._config.weight_pos_y ?? 77.8;
+    const weightFontSize = this._config.weight_size ?? 1.15;
+
+    const binX = this._config.bin_pos_x ?? 85;
+    const binY = this._config.bin_pos_y ?? 14;
+    const binScale = this._config.bin_scale ?? 1;
+
     // Buttons presence
     const hasBtnClean = Boolean(this._config.btn_clean);
     const hasBtnLevel = Boolean(this._config.btn_level);
@@ -508,12 +590,12 @@ class LitterCard extends HTMLElement {
         /* Entrance Glow/Overlay based on occupancy */
         .entrance-glow {
           position: absolute;
-          top: 41.5%;
-          left: 50%;
+          top: ${entranceY}%;
+          left: ${entranceX}%;
           transform: translate(-50%, -50%);
-          width: 48%;
-          height: 31%;
-          border-radius: 50%;
+          width: ${entranceW}%;
+          height: ${entranceH}%;
+          border-radius: ${entranceBorderRadius};
           pointer-events: none;
           background: ${isOccupied 
             ? 'radial-gradient(ellipse at center, rgba(76, 175, 80, 0.45) 0%, rgba(76, 175, 80, 0.2) 60%, rgba(76, 175, 80, 0) 85%)'
@@ -545,8 +627,8 @@ class LitterCard extends HTMLElement {
         /* Cat Weight in bottom right black circular area */
         .weight-overlay {
           position: absolute;
-          top: 77.8%;
-          left: 83.1%;
+          top: ${weightY}%;
+          left: ${weightX}%;
           transform: translate(-50%, -50%);
           display: flex;
           flex-direction: column;
@@ -565,13 +647,13 @@ class LitterCard extends HTMLElement {
           transform: translate(-50%, -50%) scale(1.08);
         }
         .weight-value {
-          font-size: 1.15rem;
+          font-size: ${weightFontSize}rem;
           font-weight: 700;
           line-height: 1;
           font-family: monospace, monospace;
         }
         .weight-unit {
-          font-size: 0.65rem;
+          font-size: ${weightFontSize * 0.55}rem;
           font-weight: 600;
           opacity: 0.9;
           margin-top: 3px;
@@ -581,8 +663,9 @@ class LitterCard extends HTMLElement {
         /* Bin Full Alert Overlay Badge */
         .bin-status-overlay {
           position: absolute;
-          top: 14%;
-          right: 8%;
+          top: ${binY}%;
+          left: ${binX}%;
+          transform: translate(-50%, -50%) scale(${binScale});
           background: ${isBinFull ? 'rgba(239, 68, 68, 0.92)' : 'rgba(30, 41, 59, 0.7)'};
           backdrop-filter: blur(6px);
           color: white;
@@ -598,8 +681,8 @@ class LitterCard extends HTMLElement {
           animation: ${isBinFull ? 'shake 0.8s ease-in-out infinite alternate' : 'none'};
         }
         @keyframes shake {
-          0% { transform: translateY(0); }
-          100% { transform: translateY(-3px); }
+          0% { transform: translate(-50%, -50%) scale(${binScale}) translateY(0); }
+          100% { transform: translate(-50%, -50%) scale(${binScale}) translateY(-3px); }
         }
 
         /* Quick Stats Grid */
@@ -853,7 +936,7 @@ class LitterCard extends HTMLElement {
         <div class="image-container">
           <img class="litter-img" src="${imgSrc}" alt="${cardTitle}" />
 
-          <!-- Entrance Light / Occupancy Indicator (Green = Occupied, Red = Clear/Standby) -->
+          <!-- Entrance Light / Occupancy Indicator -->
           <div class="entrance-glow">
             <div class="entrance-badge">
               <ha-icon icon="${isOccupied ? 'mdi:cat' : 'mdi:check-circle'}" style="--mdc-icon-size: 14px;"></ha-icon>
@@ -861,7 +944,7 @@ class LitterCard extends HTMLElement {
             </div>
           </div>
 
-          <!-- Bin status overlay (Top Right) -->
+          <!-- Bin status overlay -->
           ${this._config.sensor_bin_full ? `
             <div class="bin-status-overlay">
               <ha-icon icon="${isBinFull ? 'mdi:delete-alert' : 'mdi:delete-outline'}" style="--mdc-icon-size: 16px;"></ha-icon>
@@ -869,7 +952,7 @@ class LitterCard extends HTMLElement {
             </div>
           ` : ''}
 
-          <!-- Cat Weight in bottom black circular area -->
+          <!-- Cat Weight in bottom right black circular area -->
           ${this._config.sensor_cat_weight ? `
             <div class="weight-overlay" title="${t("weight_tooltip", lang)}">
               <div class="weight-value">${weightVal}</div>
@@ -1179,7 +1262,25 @@ class LitterCardEditor extends HTMLElement {
     if (value === "" || value === null || value === undefined) {
       delete newConfig[key];
     } else {
-      newConfig[key] = value;
+      // Auto-cast numbers if key is numeric
+      if (
+        [
+          "entrance_pos_x",
+          "entrance_pos_y",
+          "entrance_width",
+          "entrance_height",
+          "weight_pos_x",
+          "weight_pos_y",
+          "weight_size",
+          "bin_pos_x",
+          "bin_pos_y",
+          "bin_scale",
+        ].includes(key)
+      ) {
+        newConfig[key] = isNaN(value) ? value : parseFloat(value);
+      } else {
+        newConfig[key] = value;
+      }
     }
 
     this._config = newConfig;
@@ -1240,6 +1341,29 @@ class LitterCardEditor extends HTMLElement {
       { key: "cfg_bin_calibration", label: `${t("cfg_bin_calibration", lang)} (Number)`, domains: ["number", "input_number", "sensor"] },
       { key: "cfg_litter_type", label: `${t("cfg_litter_type", lang)} (Select)`, domains: ["select", "input_select"] },
       { key: "cfg_unit", label: `${t("cfg_unit", lang)} (Select)`, domains: ["select", "input_select"] },
+      // Custom Positioning & Sizing
+      { header: t("sec_positioning", lang) },
+      { key: "entrance_pos_x", label: t("opt_entrance_pos_x", lang), type: "number", min: 0, max: 100, step: 0.5, default: 50 },
+      { key: "entrance_pos_y", label: t("opt_entrance_pos_y", lang), type: "number", min: 0, max: 100, step: 0.5, default: 41.5 },
+      { key: "entrance_width", label: t("opt_entrance_width", lang), type: "number", min: 10, max: 100, step: 0.5, default: 48 },
+      { key: "entrance_height", label: t("opt_entrance_height", lang), type: "number", min: 10, max: 100, step: 0.5, default: 31 },
+      {
+        key: "entrance_shape",
+        label: t("opt_entrance_shape", lang),
+        type: "select_options",
+        options: [
+          { value: "circle", label: t("shape_circle", lang) },
+          { value: "ellipse", label: t("shape_ellipse", lang) },
+          { value: "rounded", label: t("shape_rounded", lang) },
+          { value: "square", label: t("shape_square", lang) },
+        ]
+      },
+      { key: "weight_pos_x", label: t("opt_weight_pos_x", lang), type: "number", min: 0, max: 100, step: 0.5, default: 83.1 },
+      { key: "weight_pos_y", label: t("opt_weight_pos_y", lang), type: "number", min: 0, max: 100, step: 0.5, default: 77.8 },
+      { key: "weight_size", label: t("opt_weight_size", lang), type: "number", min: 0.5, max: 3, step: 0.05, default: 1.15 },
+      { key: "bin_pos_x", label: t("opt_bin_pos_x", lang), type: "number", min: 0, max: 100, step: 0.5, default: 85 },
+      { key: "bin_pos_y", label: t("opt_bin_pos_y", lang), type: "number", min: 0, max: 100, step: 0.5, default: 14 },
+      { key: "bin_scale", label: t("opt_bin_scale", lang), type: "number", min: 0.5, max: 2, step: 0.05, default: 1 },
     ];
 
     const allEntities = this._hass ? Object.keys(this._hass.states).sort() : [];
@@ -1300,6 +1424,15 @@ class LitterCardEditor extends HTMLElement {
               </div>
             `;
           }
+          if (field.type === "number") {
+            const currentVal = (this._config && this._config[field.key] !== undefined) ? this._config[field.key] : (field.default ?? '');
+            return `
+              <div class="row">
+                <span class="label">${field.label}</span>
+                <input type="number" min="${field.min}" max="${field.max}" step="${field.step}" data-key="${field.key}" value="${currentVal}">
+              </div>
+            `;
+          }
           if (field.type === "select_options") {
             const currentVal = (this._config && this._config[field.key]) || '';
             return `
@@ -1347,6 +1480,10 @@ class LitterCardEditor extends HTMLElement {
     });
 
     this.shadowRoot.querySelectorAll("input[data-key]").forEach(inputEl => {
+      inputEl.addEventListener("input", (e) => {
+        const key = e.target.getAttribute("data-key");
+        this._valueChanged(key, e.target.value);
+      });
       inputEl.addEventListener("change", (e) => {
         const key = e.target.getAttribute("data-key");
         this._valueChanged(key, e.target.value);
