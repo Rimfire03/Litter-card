@@ -224,9 +224,8 @@ function getLanguage(config, hass) {
   if (config && config.language && TRANSLATIONS[config.language]) {
     return config.language;
   }
-  const lang = (hass && (hass.locale?.language || hass.language || "en"))
-    .substring(0, 2)
-    .toLowerCase();
+  const rawLang = (hass && (hass.locale?.language || hass.language)) || "en";
+  const lang = String(rawLang).substring(0, 2).toLowerCase();
   return TRANSLATIONS[lang] ? lang : "en";
 }
 
@@ -372,7 +371,7 @@ class LitterCard extends HTMLElement {
       on: t("status_on", lang),
       off: t("status_off", lang),
     };
-    return map[stateStr.toLowerCase()] || stateStr;
+    return map[String(stateStr).toLowerCase()] || stateStr;
   }
 
   _render() {
