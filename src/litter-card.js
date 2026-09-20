@@ -1,6 +1,6 @@
 import { DEFAULT_IMAGE } from './image-data.js';
 
-const CARD_VERSION = "0.08";
+const CARD_VERSION = "0.09";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -512,7 +512,7 @@ class LitterCard extends HTMLElement {
           left: 50%;
           transform: translate(-50%, -50%);
           width: 48%;
-          height: 38%;
+          height: 31%;
           border-radius: 50%;
           pointer-events: none;
           background: ${isOccupied 
@@ -545,8 +545,8 @@ class LitterCard extends HTMLElement {
         /* Cat Weight in bottom right black circular area */
         .weight-overlay {
           position: absolute;
-          top: 72.8%;
-          left: 75.4%;
+          top: 77.8%;
+          left: 83.1%;
           transform: translate(-50%, -50%);
           display: flex;
           flex-direction: column;
