@@ -1,10 +1,6 @@
 import { DEFAULT_IMAGE } from './image-data.js';
 
-const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace") || customElements.get("hc-main"));
-const html = LitElement ? LitElement.prototype.html : (strings, ...values) => strings.raw[0];
-const css = LitElement ? LitElement.prototype.css : (strings, ...values) => strings.raw[0];
-
-const CARD_VERSION = "1.1.0";
+const CARD_VERSION = "1.2.0";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -58,7 +54,12 @@ const TRANSLATIONS = {
     cfg_unit: "Unité de masse",
     unit_min: "min",
     unit_cycles: "cycles",
-    not_configured: "-- Non configuré --",
+    not_configured: "-- Aucun (Désactivé) --",
+    card_title: "Titre de la carte",
+    image_url: "URL de l'image (optionnel)",
+    language_label: "Langue (optionnel)",
+    auto_lang: "Automatique (Langue Home Assistant)",
+    sensors_header: "Capteurs d'état & Mesures",
   },
   en: {
     default_title: "Cat Litter Box",
@@ -105,7 +106,12 @@ const TRANSLATIONS = {
     cfg_unit: "Mass unit",
     unit_min: "min",
     unit_cycles: "cycles",
-    not_configured: "-- Not configured --",
+    not_configured: "-- None (Disabled) --",
+    card_title: "Card title",
+    image_url: "Image URL (optional)",
+    language_label: "Language (optional)",
+    auto_lang: "Auto (Home Assistant Language)",
+    sensors_header: "Sensors & Metrics",
   },
   de: {
     default_title: "Katzenklo",
@@ -152,7 +158,12 @@ const TRANSLATIONS = {
     cfg_unit: "Gewichtseinheit",
     unit_min: "Min.",
     unit_cycles: "Zyklen",
-    not_configured: "-- Nicht konfiguriert --",
+    not_configured: "-- Keine (Deaktiviert) --",
+    card_title: "Kartentitel",
+    image_url: "Bild-URL (optional)",
+    language_label: "Sprache (optional)",
+    auto_lang: "Automatisch (Home Assistant Sprache)",
+    sensors_header: "Sensoren & Messwerte",
   },
   es: {
     default_title: "Arenero Gatos",
@@ -199,7 +210,12 @@ const TRANSLATIONS = {
     cfg_unit: "Unidad de masa",
     unit_min: "min",
     unit_cycles: "ciclos",
-    not_configured: "-- No configurado --",
+    not_configured: "-- Ninguno (Desactivado) --",
+    card_title: "Título de la tarjeta",
+    image_url: "URL de imagen (opcional)",
+    language_label: "Idioma (opcional)",
+    auto_lang: "Automático (Idioma Home Assistant)",
+    sensors_header: "Sensores y Métricas",
   },
 };
 
@@ -228,41 +244,10 @@ class LitterCard extends HTMLElement {
   }
 
   setConfig(config) {
-    this._config = {
-      title: "",
-      image: "",
-      language: "",
-      ...config,
-      // Entities mappings
-      // Buttons
-      btn_clean: config.btn_clean,
-      btn_level: config.btn_level,
-      btn_restart: config.btn_restart,
-      btn_bag_replace: config.btn_bag_replace,
-      btn_bag_changed: config.btn_bag_changed,
-
-      // Sensors
-      sensor_visit_duration: config.sensor_visit_duration,
-      sensor_cleanings_count: config.sensor_cleanings_count,
-      sensor_total_visits: config.sensor_total_visits,
-      sensor_occupancy: config.sensor_occupancy,
-      sensor_cat_weight: config.sensor_cat_weight,
-      sensor_bin_full: config.sensor_bin_full,
-      sensor_status: config.sensor_status,
-      sensor_problem: config.sensor_problem,
-
-      // Config entities
-      cfg_bin_calibration: config.cfg_bin_calibration,
-      cfg_clean_wait_time: config.cfg_clean_wait_time,
-      cfg_odor_removal: config.cfg_odor_removal,
-      cfg_clean_interval: config.cfg_clean_interval,
-      cfg_auto_clean: config.cfg_auto_clean,
-      cfg_deep_clean: config.cfg_deep_clean,
-      cfg_child_lock: config.cfg_child_lock,
-      cfg_litter_type: config.cfg_litter_type,
-      cfg_unit: config.cfg_unit,
-    };
-
+    if (!config) {
+      throw new Error("Invalid configuration");
+    }
+    this._config = { ...config };
     this._render();
   }
 
@@ -275,7 +260,7 @@ class LitterCard extends HTMLElement {
   }
 
   _hasChanged(oldHass, newHass) {
-    if (!oldHass) return true;
+    if (!oldHass || !newHass) return true;
     const entities = [
       this._config.btn_clean,
       this._config.btn_level,
@@ -310,7 +295,7 @@ class LitterCard extends HTMLElement {
   }
 
   _getState(entityId) {
-    if (!entityId || !this._hass || !this._hass.states[entityId]) {
+    if (!entityId || !this._hass || !this._hass.states || !this._hass.states[entityId]) {
       return null;
     }
     return this._hass.states[entityId];
@@ -423,23 +408,23 @@ class LitterCard extends HTMLElement {
     const imgSrc = this._config.image || DEFAULT_IMAGE;
 
     // Buttons presence
-    const hasBtnClean = !this._config.btn_clean;
-    const hasBtnLevel = !this._config.btn_level;
-    const hasBtnRestart = !this._config.btn_restart;
-    const hasBtnBagReplace = !this._config.btn_bag_replace;
-    const hasBtnBagChanged = !this._config.btn_bag_changed;
+    const hasBtnClean = Boolean(this._config.btn_clean);
+    const hasBtnLevel = Boolean(this._config.btn_level);
+    const hasBtnRestart = Boolean(this._config.btn_restart);
+    const hasBtnBagReplace = Boolean(this._config.btn_bag_replace);
+    const hasBtnBagChanged = Boolean(this._config.btn_bag_changed);
     const hasAnyButtons = hasBtnClean || hasBtnLevel || hasBtnRestart || hasBtnBagReplace || hasBtnBagChanged;
 
     // Config presence
-    const hasCfgCalib = !this._config.cfg_bin_calibration;
-    const hasCfgWait = !this._config.cfg_clean_wait_time;
-    const hasCfgOdor = !this._config.cfg_odor_removal;
-    const hasCfgInterval = !this._config.cfg_clean_interval;
-    const hasCfgAuto = !this._config.cfg_auto_clean;
-    const hasCfgDeep = !this._config.cfg_deep_clean;
-    const hasCfgChildLock = !this._config.cfg_child_lock;
-    const hasCfgLitterType = !this._config.cfg_litter_type;
-    const hasCfgUnit = !this._config.cfg_unit;
+    const hasCfgCalib = Boolean(this._config.cfg_bin_calibration);
+    const hasCfgWait = Boolean(this._config.cfg_clean_wait_time);
+    const hasCfgOdor = Boolean(this._config.cfg_odor_removal);
+    const hasCfgInterval = Boolean(this._config.cfg_clean_interval);
+    const hasCfgAuto = Boolean(this._config.cfg_auto_clean);
+    const hasCfgDeep = Boolean(this._config.cfg_deep_clean);
+    const hasCfgChildLock = Boolean(this._config.cfg_child_lock);
+    const hasCfgLitterType = Boolean(this._config.cfg_litter_type);
+    const hasCfgUnit = Boolean(this._config.cfg_unit);
     const hasAnyConfig = hasCfgCalib || hasCfgWait || hasCfgOdor || hasCfgInterval || hasCfgAuto || hasCfgDeep || hasCfgChildLock || hasCfgLitterType || hasCfgUnit;
 
     const cardTitle = this._config.title || t("default_title", lang);
@@ -1161,34 +1146,9 @@ class LitterCard extends HTMLElement {
   }
 
   static getStubConfig(hass) {
-    const entities = Object.keys(hass.states);
-    const findEntity = (pattern) => entities.find(e => e.includes(pattern));
-
     return {
-      title: "Litière Automatique",
-      btn_clean: findEntity("cat_litter_box_clean") || "",
-      btn_level: findEntity("cat_litter_box_level_litter") || "",
-      btn_restart: findEntity("cat_litter_box_device_restart") || "",
-      btn_bag_replace: findEntity("cat_litter_box_bag_replace") || "",
-      btn_bag_changed: findEntity("cat_litter_box_empty") || "",
-
-      sensor_occupancy: findEntity("cat_litter_box_occupation") || "",
-      sensor_cat_weight: findEntity("cat_litter_box_cat_weight") || "",
-      sensor_bin_full: findEntity("cat_litter_box_bin_full") || "",
-      sensor_status: findEntity("cat_litter_box_etat") || "",
-      sensor_cleanings_count: findEntity("cat_litter_box_number_of_cleanings") || "",
-      sensor_total_visits: findEntity("cat_litter_box_total_visits") || "",
-      sensor_visit_duration: findEntity("cat_litter_box_visit_duration") || "",
-
-      cfg_auto_clean: findEntity("cat_litter_box_nettoyage_automatique") || "",
-      cfg_deep_clean: findEntity("cat_litter_box_deep_clean") || "",
-      cfg_odor_removal: findEntity("cat_litter_box_odor_removal_after_cleaning") || "",
-      cfg_child_lock: findEntity("cat_litter_box_securite_enfant") || "",
-      cfg_clean_wait_time: findEntity("cat_litter_box_clean_wait_time") || "",
-      cfg_clean_interval: findEntity("cat_litter_box_clean_interval") || "",
-      cfg_bin_calibration: findEntity("cat_litter_box_bin_full_calibration") || "",
-      cfg_litter_type: findEntity("cat_litter_box_litter_type") || "",
-      cfg_unit: findEntity("cat_litter_box_unit") || "",
+      type: "custom:litter-card",
+      title: "Litière",
     };
   }
 }
@@ -1203,27 +1163,29 @@ class LitterCardEditor extends HTMLElement {
   }
 
   setConfig(config) {
-    this._config = config;
+    this._config = config || {};
     this._render();
   }
 
   set hass(hass) {
+    const shouldRender = !this._hass && hass;
     this._hass = hass;
-    this._render();
+    if (shouldRender) {
+      this._render();
+    }
   }
 
-  _valueChanged(ev) {
-    if (!this._config || !this._hass) return;
-    const target = ev.target;
-    const configValue = target.configValue;
-    const value = target.value;
+  _valueChanged(key, value) {
+    if (!this._config) return;
+    
+    let newConfig = { ...this._config };
+    if (value === "" || value === null || value === undefined) {
+      delete newConfig[key];
+    } else {
+      newConfig[key] = value;
+    }
 
-    if (this._config[configValue] === value) return;
-
-    const newConfig = {
-      ...this._config,
-      [configValue]: value,
-    };
+    this._config = newConfig;
 
     const event = new CustomEvent("config-changed", {
       detail: { config: newConfig },
@@ -1234,19 +1196,19 @@ class LitterCardEditor extends HTMLElement {
   }
 
   _render() {
-    if (!this.shadowRoot || !this._hass) return;
+    if (!this.shadowRoot) return;
 
     const lang = getLanguage(this._config, this._hass);
 
     const fields = [
-      { key: "title", label: lang === "fr" ? "Titre de la carte" : lang === "de" ? "Kartentitel" : lang === "es" ? "Título de la tarjeta" : "Card title", type: "text" },
-      { key: "image", label: lang === "fr" ? "URL de l'image (optionnel)" : lang === "de" ? "Bild-URL (optional)" : lang === "es" ? "URL de imagen (opcional)" : "Image URL (optional)", type: "text" },
+      { key: "title", label: t("card_title", lang), type: "text" },
+      { key: "image", label: t("image_url", lang), type: "text" },
       {
         key: "language",
-        label: lang === "fr" ? "Langue (optionnel)" : lang === "de" ? "Sprache (optional)" : lang === "es" ? "Idioma (opcional)" : "Language (optional)",
+        label: t("language_label", lang),
         type: "select_options",
         options: [
-          { value: "", label: lang === "fr" ? "Auto (Détection Home Assistant)" : "Auto (Home Assistant Language)" },
+          { value: "", label: t("auto_lang", lang) },
           { value: "fr", label: "Français (FR)" },
           { value: "en", label: "English (EN)" },
           { value: "de", label: "Deutsch (DE)" },
@@ -1255,34 +1217,35 @@ class LitterCardEditor extends HTMLElement {
       },
       // Buttons
       { header: t("sec_controls", lang) },
-      { key: "btn_clean", label: `${t("btn_clean", lang)} (Button)` },
-      { key: "btn_level", label: `${t("btn_level", lang)} (Button)` },
-      { key: "btn_bag_replace", label: `${t("btn_bag_replace", lang)} (Button)` },
-      { key: "btn_bag_changed", label: `${t("btn_bag_changed", lang)} (Button)` },
-      { key: "btn_restart", label: `${t("btn_restart", lang)} (Button)` },
+      { key: "btn_clean", label: `${t("btn_clean", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
+      { key: "btn_level", label: `${t("btn_level", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
+      { key: "btn_bag_replace", label: `${t("btn_bag_replace", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
+      { key: "btn_bag_changed", label: `${t("btn_bag_changed", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
+      { key: "btn_restart", label: `${t("btn_restart", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
       // Sensors
-      { header: lang === "fr" ? "Capteurs" : lang === "de" ? "Sensoren" : lang === "es" ? "Sensores" : "Sensors" },
-      { key: "sensor_occupancy", label: `${t("cat_present", lang)} / ${t("litter_free", lang)} (Binary Sensor)` },
-      { key: "sensor_cat_weight", label: `${t("weight_tooltip", lang)} (Sensor)` },
-      { key: "sensor_bin_full", label: `${t("bin_full_alert", lang)} (Binary Sensor)` },
-      { key: "sensor_status", label: lang === "fr" ? "État général" : lang === "de" ? "Allgemeiner Status" : lang === "es" ? "Estado general" : "General Status (Sensor)" },
-      { key: "sensor_cleanings_count", label: `${t("stat_cleanings", lang)} (Sensor)` },
-      { key: "sensor_total_visits", label: `${t("stat_visits", lang)} (Sensor)` },
-      { key: "sensor_visit_duration", label: `${t("stat_duration", lang)} (Sensor)` },
+      { header: t("sensors_header", lang) },
+      { key: "sensor_occupancy", label: `${t("cat_present", lang)} / ${t("litter_free", lang)} (Binary Sensor)`, domains: ["binary_sensor", "sensor", "input_boolean"] },
+      { key: "sensor_cat_weight", label: `${t("weight_tooltip", lang)} (Sensor)`, domains: ["sensor", "input_number"] },
+      { key: "sensor_bin_full", label: `${t("bin_full_alert", lang)} (Binary Sensor)`, domains: ["binary_sensor", "sensor", "input_boolean"] },
+      { key: "sensor_status", label: `${t("status_standby", lang)} / Status (Sensor)`, domains: ["sensor"] },
+      { key: "sensor_problem", label: `${t("status_problem", lang)} (Binary Sensor)`, domains: ["binary_sensor", "sensor"] },
+      { key: "sensor_cleanings_count", label: `${t("stat_cleanings", lang)} (Sensor)`, domains: ["sensor", "input_number", "counter"] },
+      { key: "sensor_total_visits", label: `${t("stat_visits", lang)} (Sensor)`, domains: ["sensor", "input_number", "counter"] },
+      { key: "sensor_visit_duration", label: `${t("stat_duration", lang)} (Sensor)`, domains: ["sensor", "input_number"] },
       // Configuration
       { header: t("sec_settings", lang) },
-      { key: "cfg_auto_clean", label: `${t("cfg_auto_clean", lang)} (Switch)` },
-      { key: "cfg_deep_clean", label: `${t("cfg_deep_clean", lang)} (Switch)` },
-      { key: "cfg_odor_removal", label: `${t("cfg_odor_removal", lang)} (Switch)` },
-      { key: "cfg_child_lock", label: `${t("cfg_child_lock", lang)} (Lock / Switch)` },
-      { key: "cfg_clean_wait_time", label: `${t("cfg_clean_wait_time", lang)} (Number)` },
-      { key: "cfg_clean_interval", label: `${t("cfg_clean_interval", lang)} (Number)` },
-      { key: "cfg_bin_calibration", label: `${t("cfg_bin_calibration", lang)} (Number)` },
-      { key: "cfg_litter_type", label: `${t("cfg_litter_type", lang)} (Select)` },
-      { key: "cfg_unit", label: `${t("cfg_unit", lang)} (Select)` },
+      { key: "cfg_auto_clean", label: `${t("cfg_auto_clean", lang)} (Switch)`, domains: ["switch", "input_boolean"] },
+      { key: "cfg_deep_clean", label: `${t("cfg_deep_clean", lang)} (Switch)`, domains: ["switch", "input_boolean"] },
+      { key: "cfg_odor_removal", label: `${t("cfg_odor_removal", lang)} (Switch)`, domains: ["switch", "input_boolean"] },
+      { key: "cfg_child_lock", label: `${t("cfg_child_lock", lang)} (Lock / Switch)`, domains: ["lock", "switch", "input_boolean"] },
+      { key: "cfg_clean_wait_time", label: `${t("cfg_clean_wait_time", lang)} (Number)`, domains: ["number", "input_number", "sensor"] },
+      { key: "cfg_clean_interval", label: `${t("cfg_clean_interval", lang)} (Number)`, domains: ["number", "input_number", "sensor"] },
+      { key: "cfg_bin_calibration", label: `${t("cfg_bin_calibration", lang)} (Number)`, domains: ["number", "input_number", "sensor"] },
+      { key: "cfg_litter_type", label: `${t("cfg_litter_type", lang)} (Select)`, domains: ["select", "input_select"] },
+      { key: "cfg_unit", label: `${t("cfg_unit", lang)} (Select)`, domains: ["select", "input_select"] },
     ];
 
-    const entities = Object.keys(this._hass.states).sort();
+    const allEntities = this._hass ? Object.keys(this._hass.states).sort() : [];
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -1291,14 +1254,14 @@ class LitterCardEditor extends HTMLElement {
           flex-direction: column;
           gap: 12px;
           padding: 8px 0;
-          font-family: var(--paper-font-body1_-_font-family, sans-serif);
+          font-family: var(--paper-font-body1_-_font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
         }
         .header-title {
-          font-weight: 600;
+          font-weight: 700;
           font-size: 0.95rem;
-          margin-top: 8px;
+          margin-top: 10px;
           padding-bottom: 4px;
-          border-bottom: 1px solid var(--divider-color, #e2e8f0);
+          border-bottom: 2px solid var(--primary-color, #0284c7);
           color: var(--primary-color, #0284c7);
         }
         .row {
@@ -1307,16 +1270,23 @@ class LitterCardEditor extends HTMLElement {
           gap: 4px;
         }
         .label {
-          font-size: 0.8rem;
-          color: var(--secondary-text-color, #64748b);
+          font-size: 0.82rem;
+          font-weight: 500;
+          color: var(--primary-text-color, #334155);
         }
         input, select {
-          padding: 8px;
-          border-radius: 6px;
+          padding: 8px 10px;
+          border-radius: 8px;
           border: 1px solid var(--divider-color, #cbd5e1);
-          background: var(--card-background-color, #fff);
+          background: var(--card-background-color, #ffffff);
           color: var(--primary-text-color, #1e293b);
           font-size: 0.85rem;
+          outline: none;
+          transition: border-color 0.2s ease;
+        }
+        input:focus, select:focus {
+          border-color: var(--primary-color, #0284c7);
+          box-shadow: 0 0 0 1px var(--primary-color, #0284c7);
         }
       </style>
       <div class="editor-container">
@@ -1325,29 +1295,45 @@ class LitterCardEditor extends HTMLElement {
             return `<div class="header-title">${field.header}</div>`;
           }
           if (field.type === "text") {
+            const currentVal = (this._config && this._config[field.key]) || '';
             return `
               <div class="row">
                 <span class="label">${field.label}</span>
-                <input type="text" .configValue="${field.key}" value="${this._config[field.key] || ''}" id="${field.key}">
+                <input type="text" data-key="${field.key}" value="${currentVal}">
               </div>
             `;
           }
           if (field.type === "select_options") {
+            const currentVal = (this._config && this._config[field.key]) || '';
             return `
               <div class="row">
                 <span class="label">${field.label}</span>
-                <select .configValue="${field.key}" id="${field.key}">
-                  ${field.options.map(opt => `<option value="${opt.value}" ${this._config[field.key] === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('')}
+                <select data-key="${field.key}">
+                  ${field.options.map(opt => `<option value="${opt.value}" ${opt.value === currentVal ? 'selected' : ''}>${opt.label}</option>`).join('')}
                 </select>
               </div>
             `;
           }
+
+          // Entity dropdown list (optionally prioritized by matching domains)
+          const currentVal = (this._config && this._config[field.key]) || '';
+          let matchedEntities = allEntities;
+          if (field.domains && field.domains.length > 0) {
+            const primary = allEntities.filter(e => field.domains.some(d => e.startsWith(d + ".")));
+            const others = allEntities.filter(e => !field.domains.some(d => e.startsWith(d + ".")));
+            matchedEntities = [...primary, ...others];
+          }
+
           return `
             <div class="row">
               <span class="label">${field.label}</span>
-              <select .configValue="${field.key}" id="${field.key}">
+              <select data-key="${field.key}">
                 <option value="">${t("not_configured", lang)}</option>
-                ${entities.map(e => `<option value="${e}" ${this._config[field.key] === e ? 'selected' : ''}>${e} (${this._hass.states[e].attributes.friendly_name || e})</option>`).join('')}
+                ${matchedEntities.map(e => {
+                  const friendly = this._hass?.states[e]?.attributes?.friendly_name || e;
+                  const isSelected = e === currentVal;
+                  return `<option value="${e}" ${isSelected ? 'selected' : ''}>${friendly} (${e})</option>`;
+                }).join('')}
               </select>
             </div>
           `;
@@ -1355,18 +1341,19 @@ class LitterCardEditor extends HTMLElement {
       </div>
     `;
 
-    // Bind change events
-    fields.forEach(field => {
-      if (field.key) {
-        const el = this.shadowRoot.getElementById(field.key);
-        if (el) {
-          el.configValue = field.key;
-          el.addEventListener("change", this._valueChanged.bind(this));
-          if (field.type === "text") {
-            el.addEventListener("input", this._valueChanged.bind(this));
-          }
-        }
-      }
+    // Bind change/input events safely
+    this.shadowRoot.querySelectorAll("select[data-key]").forEach(selectEl => {
+      selectEl.addEventListener("change", (e) => {
+        const key = e.target.getAttribute("data-key");
+        this._valueChanged(key, e.target.value);
+      });
+    });
+
+    this.shadowRoot.querySelectorAll("input[data-key]").forEach(inputEl => {
+      inputEl.addEventListener("change", (e) => {
+        const key = e.target.getAttribute("data-key");
+        this._valueChanged(key, e.target.value);
+      });
     });
   }
 }
