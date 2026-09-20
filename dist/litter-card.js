@@ -509,16 +509,16 @@ class LitterCard extends HTMLElement {
         /* Entrance Glow/Overlay based on occupancy */
         .entrance-glow {
           position: absolute;
-          top: 35.5%;
+          top: 41.5%;
           left: 50%;
           transform: translate(-50%, -50%);
-          width: 44%;
-          height: 42%;
+          width: 48%;
+          height: 38%;
           border-radius: 50%;
           pointer-events: none;
           background: ${isOccupied 
-            ? 'radial-gradient(circle, rgba(76, 175, 80, 0.45) 0%, rgba(76, 175, 80, 0.2) 50%, rgba(76, 175, 80, 0) 80%)'
-            : 'radial-gradient(circle, rgba(239, 68, 68, 0.35) 0%, rgba(239, 68, 68, 0.15) 50%, rgba(239, 68, 68, 0) 80%)'
+            ? 'radial-gradient(ellipse at center, rgba(76, 175, 80, 0.45) 0%, rgba(76, 175, 80, 0.2) 60%, rgba(76, 175, 80, 0) 85%)'
+            : 'radial-gradient(ellipse at center, rgba(239, 68, 68, 0.35) 0%, rgba(239, 68, 68, 0.15) 60%, rgba(239, 68, 68, 0) 85%)'
           };
           border: 2px solid ${isOccupied ? 'rgba(76, 175, 80, 0.6)' : 'rgba(239, 68, 68, 0.4)'};
           box-shadow: inset 0 0 25px ${isOccupied ? 'rgba(76, 175, 80, 0.5)' : 'rgba(239, 68, 68, 0.3)'};
@@ -543,49 +543,47 @@ class LitterCard extends HTMLElement {
           box-shadow: 0 2px 8px rgba(0,0,0,0.25);
         }
 
-        /* Cat Weight in bottom black circular area */
+        /* Cat Weight in bottom right black circular area */
         .weight-overlay {
           position: absolute;
-          bottom: 12.5%;
-          left: 50%;
-          transform: translateX(-50%);
+          top: 72.8%;
+          left: 75.4%;
+          transform: translate(-50%, -50%);
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
           color: #00ffcc;
-          text-shadow: 0 0 8px rgba(0, 255, 204, 0.6);
+          text-shadow: 0 0 8px rgba(0, 255, 204, 0.8);
           pointer-events: auto;
-          background: rgba(0, 0, 0, 0.65);
+          background: transparent;
           border-radius: 50%;
-          width: 68px;
-          height: 68px;
-          border: 1.5px solid rgba(0, 255, 204, 0.4);
-          box-shadow: 0 0 12px rgba(0, 0, 0, 0.5);
+          width: 17%;
+          aspect-ratio: 1 / 1;
           transition: transform 0.2s ease;
         }
         .weight-overlay:hover {
-          transform: translateX(-50%) scale(1.05);
+          transform: translate(-50%, -50%) scale(1.08);
         }
         .weight-value {
-          font-size: 1.05rem;
+          font-size: 1.15rem;
           font-weight: 700;
           line-height: 1;
           font-family: monospace, monospace;
         }
         .weight-unit {
           font-size: 0.65rem;
-          font-weight: 500;
-          opacity: 0.85;
-          margin-top: 2px;
+          font-weight: 600;
+          opacity: 0.9;
+          margin-top: 3px;
           text-transform: uppercase;
         }
 
         /* Bin Full Alert Overlay Badge */
         .bin-status-overlay {
           position: absolute;
-          top: 8%;
-          right: 6%;
+          top: 14%;
+          right: 8%;
           background: ${isBinFull ? 'rgba(239, 68, 68, 0.92)' : 'rgba(30, 41, 59, 0.7)'};
           backdrop-filter: blur(6px);
           color: white;
