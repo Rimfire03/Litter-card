@@ -1,6 +1,6 @@
 import { DEFAULT_IMAGE } from './image-data.js';
 
-const CARD_VERSION = "0.11";
+const CARD_VERSION = "0.12";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -470,18 +470,18 @@ class LitterCard extends HTMLElement {
     // Image source
     const imgSrc = this._config.image || DEFAULT_IMAGE;
 
-    // Overlay Customizable Geometry
+    // Overlay Geometry Defaults
     const entranceX = this._config.entrance_pos_x ?? 50;
-    const entranceY = this._config.entrance_pos_y ?? 41.5;
-    const entranceW = this._config.entrance_width ?? 48;
-    const entranceH = this._config.entrance_height ?? 31;
+    const entranceY = this._config.entrance_pos_y ?? 46.5;
+    const entranceW = this._config.entrance_width ?? 43;
+    const entranceH = this._config.entrance_height ?? 41;
     const entranceShape = this._config.entrance_shape || "circle";
     let entranceBorderRadius = "50%";
     if (entranceShape === "rounded") entranceBorderRadius = "24px";
     if (entranceShape === "square") entranceBorderRadius = "8px";
 
-    const weightX = this._config.weight_pos_x ?? 83.1;
-    const weightY = this._config.weight_pos_y ?? 77.8;
+    const weightX = this._config.weight_pos_x ?? 81.5;
+    const weightY = this._config.weight_pos_y ?? 78.5;
     const weightFontSize = this._config.weight_size ?? 1.15;
 
     const binX = this._config.bin_pos_x ?? 85;
@@ -552,20 +552,20 @@ class LitterCard extends HTMLElement {
           border-radius: 20px;
           font-size: 0.8rem;
           font-weight: 500;
-          background: ${isOccupied ? 'rgba(76, 175, 80, 0.12)' : hasProblem ? 'rgba(244, 67, 54, 0.12)' : 'rgba(100, 116, 139, 0.1)'};
-          color: ${isOccupied ? '#2e7d32' : hasProblem ? '#d32f2f' : 'var(--secondary-text-color, #64748b)'};
+          background: ${!isOccupied ? 'rgba(76, 175, 80, 0.12)' : 'rgba(239, 68, 68, 0.12)'};
+          color: ${!isOccupied ? '#2e7d32' : '#d32f2f'};
         }
         .status-dot {
           width: 8px;
           height: 8px;
           border-radius: 50%;
-          background: ${isOccupied ? '#4caf50' : hasProblem ? '#f44336' : '#94a3b8'};
-          ${isOccupied ? 'box-shadow: 0 0 8px #4caf50; animation: pulse 2s infinite;' : ''}
+          background: ${!isOccupied ? '#4caf50' : '#f44336'};
+          ${isOccupied ? 'box-shadow: 0 0 8px #f44336; animation: pulse 2s infinite;' : ''}
         }
         @keyframes pulse {
-          0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
-          70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(76, 175, 80, 0); }
-          100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+          0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+          70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+          100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
 
         /* Image Display & Overlays */
@@ -597,12 +597,12 @@ class LitterCard extends HTMLElement {
           height: ${entranceH}%;
           border-radius: ${entranceBorderRadius};
           pointer-events: none;
-          background: ${isOccupied 
+          background: ${!isOccupied 
             ? 'radial-gradient(ellipse at center, rgba(76, 175, 80, 0.45) 0%, rgba(76, 175, 80, 0.2) 60%, rgba(76, 175, 80, 0) 85%)'
-            : 'radial-gradient(ellipse at center, rgba(239, 68, 68, 0.35) 0%, rgba(239, 68, 68, 0.15) 60%, rgba(239, 68, 68, 0) 85%)'
+            : 'radial-gradient(ellipse at center, rgba(239, 68, 68, 0.45) 0%, rgba(239, 68, 68, 0.2) 60%, rgba(239, 68, 68, 0) 85%)'
           };
-          border: 2px solid ${isOccupied ? 'rgba(76, 175, 80, 0.6)' : 'rgba(239, 68, 68, 0.4)'};
-          box-shadow: inset 0 0 25px ${isOccupied ? 'rgba(76, 175, 80, 0.5)' : 'rgba(239, 68, 68, 0.3)'};
+          border: 2px solid ${!isOccupied ? 'rgba(76, 175, 80, 0.6)' : 'rgba(239, 68, 68, 0.6)'};
+          box-shadow: inset 0 0 25px ${!isOccupied ? 'rgba(76, 175, 80, 0.5)' : 'rgba(239, 68, 68, 0.5)'};
           transition: all 0.5s ease;
           display: flex;
           align-items: center;
@@ -610,7 +610,7 @@ class LitterCard extends HTMLElement {
         }
 
         .entrance-badge {
-          background: ${isOccupied ? 'rgba(46, 125, 50, 0.85)' : 'rgba(30, 41, 59, 0.75)'};
+          background: ${!isOccupied ? 'rgba(46, 125, 50, 0.85)' : 'rgba(185, 28, 28, 0.85)'};
           backdrop-filter: blur(4px);
           color: white;
           padding: 4px 10px;
@@ -1341,29 +1341,6 @@ class LitterCardEditor extends HTMLElement {
       { key: "cfg_bin_calibration", label: `${t("cfg_bin_calibration", lang)} (Number)`, domains: ["number", "input_number", "sensor"] },
       { key: "cfg_litter_type", label: `${t("cfg_litter_type", lang)} (Select)`, domains: ["select", "input_select"] },
       { key: "cfg_unit", label: `${t("cfg_unit", lang)} (Select)`, domains: ["select", "input_select"] },
-      // Custom Positioning & Sizing
-      { header: t("sec_positioning", lang) },
-      { key: "entrance_pos_x", label: t("opt_entrance_pos_x", lang), type: "number", min: 0, max: 100, step: 0.5, default: 50 },
-      { key: "entrance_pos_y", label: t("opt_entrance_pos_y", lang), type: "number", min: 0, max: 100, step: 0.5, default: 41.5 },
-      { key: "entrance_width", label: t("opt_entrance_width", lang), type: "number", min: 10, max: 100, step: 0.5, default: 48 },
-      { key: "entrance_height", label: t("opt_entrance_height", lang), type: "number", min: 10, max: 100, step: 0.5, default: 31 },
-      {
-        key: "entrance_shape",
-        label: t("opt_entrance_shape", lang),
-        type: "select_options",
-        options: [
-          { value: "circle", label: t("shape_circle", lang) },
-          { value: "ellipse", label: t("shape_ellipse", lang) },
-          { value: "rounded", label: t("shape_rounded", lang) },
-          { value: "square", label: t("shape_square", lang) },
-        ]
-      },
-      { key: "weight_pos_x", label: t("opt_weight_pos_x", lang), type: "number", min: 0, max: 100, step: 0.5, default: 83.1 },
-      { key: "weight_pos_y", label: t("opt_weight_pos_y", lang), type: "number", min: 0, max: 100, step: 0.5, default: 77.8 },
-      { key: "weight_size", label: t("opt_weight_size", lang), type: "number", min: 0.5, max: 3, step: 0.05, default: 1.15 },
-      { key: "bin_pos_x", label: t("opt_bin_pos_x", lang), type: "number", min: 0, max: 100, step: 0.5, default: 85 },
-      { key: "bin_pos_y", label: t("opt_bin_pos_y", lang), type: "number", min: 0, max: 100, step: 0.5, default: 14 },
-      { key: "bin_scale", label: t("opt_bin_scale", lang), type: "number", min: 0.5, max: 2, step: 0.05, default: 1 },
     ];
 
     const allEntities = this._hass ? Object.keys(this._hass.states).sort() : [];
