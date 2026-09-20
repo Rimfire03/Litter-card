@@ -1,0 +1,19 @@
+{
+  "name": "litter-card",
+  "version": "1.0.0",
+  "description": "Lovelace card for generic automatic cat litter boxes in Home Assistant / HACS",
+  "main": "dist/litter-card.js",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "keywords": [
+    "home-assistant",
+    "hacs",
+    "custom-card",
+    "lovelace",
+    "litter-box",
+    "litiere"
+  ],
+  "author": "Thomas Guidez",
+  "license": "MIT"
+}

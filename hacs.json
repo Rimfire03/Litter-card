@@ -1,0 +1,6 @@
+{
+  "name": "Litter Card",
+  "description": "A modern and customizable Lovelace card for generic automatic cat litter boxes (Litières automatiques).",
+  "render_readme": true,
+  "filename": "litter-card.js"
+}
