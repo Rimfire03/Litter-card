@@ -30,7 +30,7 @@ If you find this card helpful, consider buying me a coffee to support the develo
 
 ---
 
-![Litter-card Preview](dist/litiere.png)
+![Litter-card Preview](demo.png)
 
 ---
 
