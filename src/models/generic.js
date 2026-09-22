@@ -54,4 +54,12 @@ export default {
       "cfg_unit",
     ],
   },
+
+  // Inversion du sens de fonctionnement des interrupteurs bistables (false = normal, true = inversé)
+  invert_switches: {
+    cfg_auto_clean: false,
+    cfg_deep_clean: false,
+    cfg_odor_removal: false,
+    cfg_child_lock: false,
+  },
 };

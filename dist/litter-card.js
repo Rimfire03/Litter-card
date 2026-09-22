@@ -54,6 +54,12 @@ export const LITTER_MODELS = {
         "cfg_litter_type",
         "cfg_unit"
       ]
+    },
+    "invert_switches": {
+      "cfg_auto_clean": false,
+      "cfg_deep_clean": false,
+      "cfg_odor_removal": false,
+      "cfg_child_lock": false
     }
   },
   "generic": {
@@ -104,6 +110,12 @@ export const LITTER_MODELS = {
         "cfg_litter_type",
         "cfg_unit"
       ]
+    },
+    "invert_switches": {
+      "cfg_auto_clean": false,
+      "cfg_deep_clean": false,
+      "cfg_odor_removal": false,
+      "cfg_child_lock": false
     }
   }
 };
@@ -113,7 +125,7 @@ export function getModelConfig(modelId) {
 }
 
 
-const CARD_VERSION = "0.22-dev";
+const CARD_VERSION = "0.23-dev";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -1263,10 +1275,29 @@ class LitterCard extends HTMLElement {
     this._bindEvents();
   }
 
+  _isSwitchInverted(configKey) {
+    // Check if inverted in user card config
+    const invertKey = `invert_${configKey}`;
+    if (this._config[invertKey] !== undefined) {
+      return Boolean(this._config[invertKey]);
+    }
+    // Check model preset definition
+    const modelPreset = getModelConfig(this._config.model || DEFAULT_MODEL_ID);
+    if (modelPreset && modelPreset.invert_switches && modelPreset.invert_switches[configKey] !== undefined) {
+      return Boolean(modelPreset.invert_switches[configKey]);
+    }
+    return false;
+  }
+
   _renderSwitchRow(configKey, title, desc) {
     const entityId = this._config[configKey];
     const stateObj = this._getState(entityId);
-    const isOn = stateObj && (stateObj.state === "on" || stateObj.state === "true");
+    let isOn = stateObj && (stateObj.state === "on" || stateObj.state === "true");
+    
+    // Apply inversion if configured in model or card
+    if (this._isSwitchInverted(configKey)) {
+      isOn = !isOn;
+    }
 
     return `
       <div class="config-row">
@@ -1285,7 +1316,12 @@ class LitterCard extends HTMLElement {
   _renderLockRow(configKey, title, desc) {
     const entityId = this._config[configKey];
     const stateObj = this._getState(entityId);
-    const isLocked = stateObj && stateObj.state === "locked";
+    let isLocked = stateObj && stateObj.state === "locked";
+
+    // Apply inversion if configured in model or card
+    if (this._isSwitchInverted(configKey)) {
+      isLocked = !isLocked;
+    }
 
     return `
       <div class="config-row">
