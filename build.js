@@ -9,16 +9,24 @@ if (!fs.existsSync(distDir)) {
   fs.mkdirSync(distDir, { recursive: true });
 }
 
-// Compute dynamic version x.yy based on git commit count
+// Compute dynamic version x.yy based on git commit count and branch
 function getVersion() {
   try {
     const countStr = execSync('git rev-list --count HEAD', { encoding: 'utf8' }).trim();
-    // Next commit count index (current count + 1 for the commit being built, or current count)
+    let branch = '';
+    try {
+      branch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
+    } catch (e) {}
+
     const count = parseInt(countStr, 10);
-    // Next commit will be count + 1
     const nextCommitNum = count + 1;
     const x = Math.floor(nextCommitNum / 100);
     const yy = String(nextCommitNum % 100).padStart(2, '0');
+    
+    // Add -dev suffix if on dev branch
+    if (branch === 'dev') {
+      return `${x}.${yy}-dev`;
+    }
     return `${x}.${yy}`;
   } catch (err) {
     return '0.01';

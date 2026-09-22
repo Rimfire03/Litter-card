@@ -21,12 +21,22 @@ jobs:
           cd dist
           zip -r litter-card.zip litter-card.js litiere.png
 
+      - name: Determine Prerelease
+        id: check_prerelease
+        run: |
+          if [[ "${{ github.ref_name }}" == *"-dev"* || "${{ github.ref_name }}" == *"-beta"* || "${{ github.ref_name }}" == *"-rc"* ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Upload binaries to release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          prerelease: ${{ steps.check_prerelease.outputs.is_prerelease }}
           files: |
             dist/litter-card.js
             dist/litiere.png
