@@ -113,7 +113,7 @@ export function getModelConfig(modelId) {
 }
 
 
-const CARD_VERSION = "0.21-dev";
+const CARD_VERSION = "0.22-dev";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -1530,7 +1530,6 @@ class LitterCardEditor extends HTMLElement {
 
     const fields = [
       { key: "title", label: t("card_title", lang), type: "text" },
-      { key: "image", label: t("image_url", lang), type: "text" },
       {
         key: "language",
         label: t("language_label", lang),
@@ -1549,6 +1548,8 @@ class LitterCardEditor extends HTMLElement {
         type: "select_options",
         options: modelOptions,
       },
+      // Display custom Image URL field ONLY if generic/custom model is chosen
+      ...(currentModelId === "generic" ? [{ key: "image", label: t("image_url", lang), type: "text" }] : []),
       // Buttons
       ...(activeButtons.length > 0 ? [{ header: t("sec_controls", lang) }, ...activeButtons] : []),
       // Sensors
