@@ -1,6 +1,6 @@
 import { DEFAULT_IMAGE } from './image-data.js';
 
-const CARD_VERSION = "0.16-dev";
+const CARD_VERSION = "0.17-dev";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -200,7 +200,7 @@ const TRANSLATIONS = {
     cfg_deep_clean: "Limpieza profunda",
     cfg_deep_clean_desc: "Ciclo exhaustivo de rotación del tambor",
     cfg_odor_removal: "Desodorización",
-    cfg_odor_removal_desc: "Activar tras cada ciclo de limpieza",
+    cfg_odor_removal_desc: "Activar tras cada cycle de limpieza",
     cfg_child_lock: "Bloqueo infantil",
     cfg_child_lock_desc: "Bloquea los botones físicos",
     cfg_clean_wait_time: "Retraso antes de limpiar",
@@ -1169,13 +1169,15 @@ class LitterCard extends HTMLElement {
   }
 }
 
-// GUI Card Editor Component using ha-form or native Home Assistant ha-entity-picker
+// GUI Card Editor Component using searchable custom select popup
 class LitterCardEditor extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
     this._config = {};
     this._hass = null;
+    this._openDropdownKey = null;
+    this._filterQuery = "";
   }
 
   setConfig(config) {
@@ -1184,20 +1186,10 @@ class LitterCardEditor extends HTMLElement {
   }
 
   set hass(hass) {
-    const shouldRender = !this._hass && hass;
+    const isFirstHass = !this._hass && hass;
     this._hass = hass;
-    if (shouldRender) {
+    if (isFirstHass) {
       this._render();
-    } else {
-      // Update hass property on all ha-entity-picker or ha-form elements
-      const pickers = this.shadowRoot.querySelectorAll("ha-entity-picker");
-      pickers.forEach(picker => {
-        picker.hass = hass;
-      });
-      const haForm = this.shadowRoot.querySelector("ha-form");
-      if (haForm) {
-        haForm.hass = hass;
-      }
     }
   }
 
@@ -1221,113 +1213,11 @@ class LitterCardEditor extends HTMLElement {
     this.dispatchEvent(event);
   }
 
-  _computeSchema(lang) {
-    return [
-      { name: "title", label: t("card_title", lang), selector: { text: {} } },
-      { name: "image", label: t("image_url", lang), selector: { text: {} } },
-      {
-        name: "language",
-        label: t("language_label", lang),
-        selector: {
-          select: {
-            mode: "dropdown",
-            options: [
-              { value: "", label: t("auto_lang", lang) },
-              { value: "fr", label: "Français (FR)" },
-              { value: "en", label: "English (EN)" },
-              { value: "de", label: "Deutsch (DE)" },
-              { value: "es", label: "Español (ES)" },
-            ]
-          }
-        }
-      },
-      // Contrôles manuels
-      {
-        name: "sec_controls",
-        type: "constant",
-        label: `🔧 ${t("sec_controls", lang)}`,
-      },
-      { name: "btn_clean", label: `${t("btn_clean", lang)} (Button)`, selector: { entity: { domain: ["button", "input_button", "switch"] } } },
-      { name: "btn_level", label: `${t("btn_level", lang)} (Button)`, selector: { entity: { domain: ["button", "input_button", "switch"] } } },
-      { name: "btn_bag_replace", label: `${t("btn_bag_replace", lang)} (Button)`, selector: { entity: { domain: ["button", "input_button", "switch"] } } },
-      { name: "btn_bag_changed", label: `${t("btn_bag_changed", lang)} (Button)`, selector: { entity: { domain: ["button", "input_button", "switch"] } } },
-      { name: "btn_restart", label: `${t("btn_restart", lang)} (Button)`, selector: { entity: { domain: ["button", "input_button", "switch"] } } },
-      
-      // Capteurs
-      {
-        name: "sec_sensors",
-        type: "constant",
-        label: `📊 ${t("sensors_header", lang)}`,
-      },
-      { name: "sensor_occupancy", label: `${t("cat_present", lang)} / ${t("litter_free", lang)} (Binary Sensor)`, selector: { entity: { domain: ["binary_sensor", "sensor", "input_boolean"] } } },
-      { name: "sensor_cat_weight", label: `${t("weight_tooltip", lang)} (Sensor)`, selector: { entity: { domain: ["sensor", "input_number"] } } },
-      { name: "sensor_bin_full", label: `${t("bin_full_alert", lang)} (Binary Sensor)`, selector: { entity: { domain: ["binary_sensor", "sensor", "input_boolean"] } } },
-      { name: "sensor_status", label: `${t("status_standby", lang)} / Status (Sensor)`, selector: { entity: { domain: ["sensor"] } } },
-      { name: "sensor_problem", label: `${t("status_problem", lang)} (Binary Sensor)`, selector: { entity: { domain: ["binary_sensor", "sensor"] } } },
-      { name: "sensor_cleanings_count", label: `${t("stat_cleanings", lang)} (Sensor)`, selector: { entity: { domain: ["sensor", "input_number", "counter"] } } },
-      { name: "sensor_total_visits", label: `${t("stat_visits", lang)} (Sensor)`, selector: { entity: { domain: ["sensor", "input_number", "counter"] } } },
-      { name: "sensor_visit_duration", label: `${t("stat_duration", lang)} (Sensor)`, selector: { entity: { domain: ["sensor", "input_number"] } } },
-
-      // Configuration & Options
-      {
-        name: "sec_settings",
-        type: "constant",
-        label: `⚙️ ${t("sec_settings", lang)}`,
-      },
-      { name: "cfg_auto_clean", label: `${t("cfg_auto_clean", lang)} (Switch)`, selector: { entity: { domain: ["switch", "input_boolean"] } } },
-      { name: "cfg_deep_clean", label: `${t("cfg_deep_clean", lang)} (Switch)`, selector: { entity: { domain: ["switch", "input_boolean"] } } },
-      { name: "cfg_odor_removal", label: `${t("cfg_odor_removal", lang)} (Switch)`, selector: { entity: { domain: ["switch", "input_boolean"] } } },
-      { name: "cfg_child_lock", label: `${t("cfg_child_lock", lang)} (Lock / Switch)`, selector: { entity: { domain: ["lock", "switch", "input_boolean"] } } },
-      { name: "cfg_clean_wait_time", label: `${t("cfg_clean_wait_time", lang)} (Number)`, selector: { entity: { domain: ["number", "input_number", "sensor"] } } },
-      { name: "cfg_clean_interval", label: `${t("cfg_clean_interval", lang)} (Number)`, selector: { entity: { domain: ["number", "input_number", "sensor"] } } },
-      { name: "cfg_bin_calibration", label: `${t("cfg_bin_calibration", lang)} (Number)`, selector: { entity: { domain: ["number", "input_number", "sensor"] } } },
-      { name: "cfg_litter_type", label: `${t("cfg_litter_type", lang)} (Select)`, selector: { entity: { domain: ["select", "input_select"] } } },
-      { name: "cfg_unit", label: `${t("cfg_unit", lang)} (Select)`, selector: { entity: { domain: ["select", "input_select"] } } },
-    ];
-  }
-
   _render() {
     if (!this.shadowRoot) return;
 
     const lang = getLanguage(this._config, this._hass);
 
-    // If Home Assistant's native ha-form is available, use it directly (standard HA form with native entity selectors)
-    if (customElements.get("ha-form")) {
-      const schema = this._computeSchema(lang).filter(f => f.type !== "constant");
-      
-      this.shadowRoot.innerHTML = `
-        <style>
-          .editor-container {
-            padding: 8px 0;
-            font-family: var(--paper-font-body1_-_font-family, sans-serif);
-          }
-        </style>
-        <div class="editor-container">
-          <ha-form
-            .hass=${this._hass}
-            .data=${this._config}
-            .schema=${schema}
-            .computeLabel=${schemaItem => schemaItem.label || schemaItem.name}
-          ></ha-form>
-        </div>
-      `;
-
-      const haForm = this.shadowRoot.querySelector("ha-form");
-      if (haForm) {
-        haForm.addEventListener("value-changed", (ev) => {
-          this._config = ev.detail.value;
-          const event = new CustomEvent("config-changed", {
-            detail: { config: this._config },
-            bubbles: true,
-            composed: true,
-          });
-          this.dispatchEvent(event);
-        });
-      }
-      return;
-    }
-
-    // Fallback using native ha-entity-picker elements
     const fields = [
       { key: "title", label: t("card_title", lang), type: "text" },
       { key: "image", label: t("image_url", lang), type: "text" },
@@ -1345,40 +1235,42 @@ class LitterCardEditor extends HTMLElement {
       },
       // Buttons
       { header: t("sec_controls", lang) },
-      { key: "btn_clean", label: `${t("btn_clean", lang)} (Button)`, domain: "button" },
-      { key: "btn_level", label: `${t("btn_level", lang)} (Button)`, domain: "button" },
-      { key: "btn_bag_replace", label: `${t("btn_bag_replace", lang)} (Button)`, domain: "button" },
-      { key: "btn_bag_changed", label: `${t("btn_bag_changed", lang)} (Button)`, domain: "button" },
-      { key: "btn_restart", label: `${t("btn_restart", lang)} (Button)`, domain: "button" },
+      { key: "btn_clean", label: `${t("btn_clean", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
+      { key: "btn_level", label: `${t("btn_level", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
+      { key: "btn_bag_replace", label: `${t("btn_bag_replace", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
+      { key: "btn_bag_changed", label: `${t("btn_bag_changed", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
+      { key: "btn_restart", label: `${t("btn_restart", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
       // Sensors
       { header: t("sensors_header", lang) },
-      { key: "sensor_occupancy", label: `${t("cat_present", lang)} / ${t("litter_free", lang)} (Binary Sensor)`, domain: "binary_sensor" },
-      { key: "sensor_cat_weight", label: `${t("weight_tooltip", lang)} (Sensor)`, domain: "sensor" },
-      { key: "sensor_bin_full", label: `${t("bin_full_alert", lang)} (Binary Sensor)`, domain: "binary_sensor" },
-      { key: "sensor_status", label: `${t("status_standby", lang)} / Status (Sensor)`, domain: "sensor" },
-      { key: "sensor_problem", label: `${t("status_problem", lang)} (Binary Sensor)`, domain: "binary_sensor" },
-      { key: "sensor_cleanings_count", label: `${t("stat_cleanings", lang)} (Sensor)`, domain: "sensor" },
-      { key: "sensor_total_visits", label: `${t("stat_visits", lang)} (Sensor)`, domain: "sensor" },
-      { key: "sensor_visit_duration", label: `${t("stat_duration", lang)} (Sensor)`, domain: "sensor" },
+      { key: "sensor_occupancy", label: `${t("cat_present", lang)} / ${t("litter_free", lang)} (Binary Sensor)`, domains: ["binary_sensor", "sensor", "input_boolean"] },
+      { key: "sensor_cat_weight", label: `${t("weight_tooltip", lang)} (Sensor)`, domains: ["sensor", "input_number"] },
+      { key: "sensor_bin_full", label: `${t("bin_full_alert", lang)} (Binary Sensor)`, domains: ["binary_sensor", "sensor", "input_boolean"] },
+      { key: "sensor_status", label: `${t("status_standby", lang)} / Status (Sensor)`, domains: ["sensor"] },
+      { key: "sensor_problem", label: `${t("status_problem", lang)} (Binary Sensor)`, domains: ["binary_sensor", "sensor"] },
+      { key: "sensor_cleanings_count", label: `${t("stat_cleanings", lang)} (Sensor)`, domains: ["sensor", "input_number", "counter"] },
+      { key: "sensor_total_visits", label: `${t("stat_visits", lang)} (Sensor)`, domains: ["sensor", "input_number", "counter"] },
+      { key: "sensor_visit_duration", label: `${t("stat_duration", lang)} (Sensor)`, domains: ["sensor", "input_number"] },
       // Configuration
       { header: t("sec_settings", lang) },
-      { key: "cfg_auto_clean", label: `${t("cfg_auto_clean", lang)} (Switch)`, domain: "switch" },
-      { key: "cfg_deep_clean", label: `${t("cfg_deep_clean", lang)} (Switch)`, domain: "switch" },
-      { key: "cfg_odor_removal", label: `${t("cfg_odor_removal", lang)} (Switch)`, domain: "switch" },
-      { key: "cfg_child_lock", label: `${t("cfg_child_lock", lang)} (Lock / Switch)`, domain: "lock" },
-      { key: "cfg_clean_wait_time", label: `${t("cfg_clean_wait_time", lang)} (Number)`, domain: "number" },
-      { key: "cfg_clean_interval", label: `${t("cfg_clean_interval", lang)} (Number)`, domain: "number" },
-      { key: "cfg_bin_calibration", label: `${t("cfg_bin_calibration", lang)} (Number)`, domain: "number" },
-      { key: "cfg_litter_type", label: `${t("cfg_litter_type", lang)} (Select)`, domain: "select" },
-      { key: "cfg_unit", label: `${t("cfg_unit", lang)} (Select)`, domain: "select" },
+      { key: "cfg_auto_clean", label: `${t("cfg_auto_clean", lang)} (Switch)`, domains: ["switch", "input_boolean"] },
+      { key: "cfg_deep_clean", label: `${t("cfg_deep_clean", lang)} (Switch)`, domains: ["switch", "input_boolean"] },
+      { key: "cfg_odor_removal", label: `${t("cfg_odor_removal", lang)} (Switch)`, domains: ["switch", "input_boolean"] },
+      { key: "cfg_child_lock", label: `${t("cfg_child_lock", lang)} (Lock / Switch)`, domains: ["lock", "switch", "input_boolean"] },
+      { key: "cfg_clean_wait_time", label: `${t("cfg_clean_wait_time", lang)} (Number)`, domains: ["number", "input_number", "sensor"] },
+      { key: "cfg_clean_interval", label: `${t("cfg_clean_interval", lang)} (Number)`, domains: ["number", "input_number", "sensor"] },
+      { key: "cfg_bin_calibration", label: `${t("cfg_bin_calibration", lang)} (Number)`, domains: ["number", "input_number", "sensor"] },
+      { key: "cfg_litter_type", label: `${t("cfg_litter_type", lang)} (Select)`, domains: ["select", "input_select"] },
+      { key: "cfg_unit", label: `${t("cfg_unit", lang)} (Select)`, domains: ["select", "input_select"] },
     ];
+
+    const allEntities = this._hass ? Object.keys(this._hass.states).sort() : [];
 
     this.shadowRoot.innerHTML = `
       <style>
         .editor-container {
           display: flex;
           flex-direction: column;
-          gap: 14px;
+          gap: 12px;
           padding: 8px 0;
           font-family: var(--paper-font-body1_-_font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
         }
@@ -1394,13 +1286,14 @@ class LitterCardEditor extends HTMLElement {
           display: flex;
           flex-direction: column;
           gap: 4px;
+          position: relative;
         }
         .label {
           font-size: 0.82rem;
           font-weight: 500;
           color: var(--primary-text-color, #334155);
         }
-        input, select {
+        input.text-input, select.native-select {
           padding: 8px 10px;
           border-radius: 8px;
           border: 1px solid var(--divider-color, #cbd5e1);
@@ -1412,13 +1305,125 @@ class LitterCardEditor extends HTMLElement {
           width: 100%;
           box-sizing: border-box;
         }
-        input:focus, select:focus {
+        input.text-input:focus, select.native-select:focus {
           border-color: var(--primary-color, #0284c7);
           box-shadow: 0 0 0 1px var(--primary-color, #0284c7);
         }
-        ha-entity-picker {
+
+        /* Custom Searchable Select Box matching Home Assistant style */
+        .picker-box {
+          position: relative;
           width: 100%;
-          display: block;
+        }
+        .picker-trigger {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 9px 12px;
+          border-radius: 8px;
+          border: 1px solid var(--divider-color, #cbd5e1);
+          background: var(--card-background-color, #ffffff);
+          color: var(--primary-text-color, #1e293b);
+          font-size: 0.85rem;
+          cursor: pointer;
+          user-select: none;
+          box-sizing: border-box;
+          transition: border-color 0.2s ease;
+        }
+        .picker-trigger:hover {
+          border-color: var(--primary-color, #0284c7);
+        }
+        .picker-trigger .selected-text {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          font-weight: 500;
+        }
+        .picker-trigger .selected-entity-id {
+          font-size: 0.72rem;
+          color: var(--secondary-text-color, #64748b);
+          margin-left: 6px;
+        }
+        .picker-dropdown {
+          position: absolute;
+          top: calc(100% + 4px);
+          left: 0;
+          right: 0;
+          z-index: 999;
+          background: var(--card-background-color, #ffffff);
+          border-radius: 8px;
+          border: 1px solid var(--divider-color, #cbd5e1);
+          box-shadow: 0 6px 16px rgba(0,0,0,0.18);
+          max-height: 240px;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+        .picker-search {
+          padding: 8px;
+          border-bottom: 1px solid var(--divider-color, #e2e8f0);
+          background: var(--secondary-background-color, #f8fafc);
+        }
+        .picker-search input {
+          width: 100%;
+          padding: 7px 10px;
+          border-radius: 6px;
+          border: 1px solid var(--divider-color, #cbd5e1);
+          background: var(--card-background-color, #ffffff);
+          color: var(--primary-text-color, #1e293b);
+          font-size: 0.82rem;
+          box-sizing: border-box;
+          outline: none;
+        }
+        .picker-search input:focus {
+          border-color: var(--primary-color, #0284c7);
+        }
+        .picker-options {
+          overflow-y: auto;
+          max-height: 190px;
+        }
+        .picker-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 8px 12px;
+          cursor: pointer;
+          border-bottom: 1px solid rgba(125, 125, 125, 0.06);
+          transition: background 0.15s ease;
+        }
+        .picker-item:hover {
+          background: rgba(2, 132, 199, 0.08);
+        }
+        .picker-item.active {
+          background: rgba(2, 132, 199, 0.15);
+          font-weight: 600;
+        }
+        .item-main {
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+        .item-name {
+          font-size: 0.82rem;
+          color: var(--primary-text-color, #1e293b);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .item-id {
+          font-size: 0.7rem;
+          color: var(--secondary-text-color, #64748b);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .item-domain {
+          font-size: 0.65rem;
+          padding: 2px 6px;
+          border-radius: 4px;
+          background: var(--secondary-background-color, #f1f5f9);
+          color: var(--secondary-text-color, #475569);
+          text-transform: uppercase;
         }
       </style>
       <div class="editor-container">
@@ -1431,7 +1436,7 @@ class LitterCardEditor extends HTMLElement {
             return `
               <div class="row">
                 <span class="label">${field.label}</span>
-                <input type="text" data-key="${field.key}" value="${currentVal}">
+                <input type="text" class="text-input" data-key="${field.key}" value="${currentVal}">
               </div>
             `;
           }
@@ -1440,49 +1445,149 @@ class LitterCardEditor extends HTMLElement {
             return `
               <div class="row">
                 <span class="label">${field.label}</span>
-                <select data-key="${field.key}">
+                <select class="native-select" data-key="${field.key}">
                   ${field.options.map(opt => `<option value="${opt.value}" ${opt.value === currentVal ? 'selected' : ''}>${opt.label}</option>`).join('')}
                 </select>
               </div>
             `;
           }
 
-          // Native Home Assistant Entity Picker
+          // Searchable Entity Picker Box
           const currentVal = (this._config && this._config[field.key]) || '';
+          let matchedEntities = allEntities;
+          if (field.domains && field.domains.length > 0) {
+            const primary = allEntities.filter(e => field.domains.some(d => e.startsWith(d + ".")));
+            const others = allEntities.filter(e => !field.domains.some(d => e.startsWith(d + ".")));
+            matchedEntities = [...primary, ...others];
+          }
+
+          const currentFriendly = this._hass?.states[currentVal]?.attributes?.friendly_name || '';
+          const isDropdownOpen = this._openDropdownKey === field.key;
+          const query = isDropdownOpen ? this._filterQuery.toLowerCase() : '';
+
+          const filteredEntities = query
+            ? matchedEntities.filter(e => {
+                const friendly = (this._hass?.states[e]?.attributes?.friendly_name || '').toLowerCase();
+                return e.toLowerCase().includes(query) || friendly.includes(query);
+              })
+            : matchedEntities;
+
           return `
             <div class="row">
               <span class="label">${field.label}</span>
-              <ha-entity-picker
-                data-key="${field.key}"
-                .hass=${this._hass}
-                .value=${currentVal}
-                .includeDomains=${field.domain ? [field.domain] : undefined}
-                allow-custom-entity
-              ></ha-entity-picker>
+              <div class="picker-box" data-field="${field.key}">
+                <div class="picker-trigger" data-trigger="${field.key}">
+                  <span class="selected-text">
+                    ${currentVal ? `${currentFriendly || currentVal}` : `<span style="opacity: 0.6;">${t("not_configured", lang)}</span>`}
+                    ${currentVal && currentFriendly ? `<span class="selected-entity-id">(${currentVal})</span>` : ''}
+                  </span>
+                  <ha-icon icon="${isDropdownOpen ? 'mdi:chevron-up' : 'mdi:chevron-down'}" style="--mdc-icon-size: 18px; color: var(--secondary-text-color, #64748b);"></ha-icon>
+                </div>
+
+                ${isDropdownOpen ? `
+                  <div class="picker-dropdown">
+                    <div class="picker-search">
+                      <input type="text" class="search-field" placeholder="🔍 Rechercher..." value="${this._filterQuery}" autofocus>
+                    </div>
+                    <div class="picker-options">
+                      <div class="picker-item ${!currentVal ? 'active' : ''}" data-val="">
+                        <div class="item-main">
+                          <span class="item-name" style="font-style: italic; opacity: 0.7;">${t("not_configured", lang)}</span>
+                        </div>
+                      </div>
+                      ${filteredEntities.map(e => {
+                        const friendly = this._hass?.states[e]?.attributes?.friendly_name || e;
+                        const domain = e.split('.')[0];
+                        const isActive = e === currentVal;
+                        return `
+                          <div class="picker-item ${isActive ? 'active' : ''}" data-val="${e}">
+                            <div class="item-main">
+                              <span class="item-name">${friendly}</span>
+                              <span class="item-id">${e}</span>
+                            </div>
+                            <span class="item-domain">${domain}</span>
+                          </div>
+                        `;
+                      }).join('')}
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
             </div>
           `;
         }).join('')}
       </div>
     `;
 
-    // Bind entity-picker events
-    this.shadowRoot.querySelectorAll("ha-entity-picker").forEach(picker => {
-      picker.hass = this._hass;
-      picker.addEventListener("value-changed", (e) => {
-        const key = picker.getAttribute("data-key");
-        this._valueChanged(key, e.detail.value);
+    // Bind triggers to open/close dropdown
+    this.shadowRoot.querySelectorAll(".picker-trigger").forEach(trigger => {
+      trigger.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const fieldKey = trigger.getAttribute("data-trigger");
+        if (this._openDropdownKey === fieldKey) {
+          this._openDropdownKey = null;
+        } else {
+          this._openDropdownKey = fieldKey;
+          this._filterQuery = "";
+        }
+        this._render();
+
+        // Focus search field
+        setTimeout(() => {
+          const input = this.shadowRoot.querySelector(".search-field");
+          if (input) input.focus();
+        }, 50);
       });
     });
 
-    // Bind change/input events for text and selects
-    this.shadowRoot.querySelectorAll("select[data-key]").forEach(selectEl => {
+    // Handle search input typing
+    const searchField = this.shadowRoot.querySelector(".search-field");
+    if (searchField) {
+      searchField.addEventListener("input", (e) => {
+        this._filterQuery = e.target.value;
+        this._render();
+        setTimeout(() => {
+          const input = this.shadowRoot.querySelector(".search-field");
+          if (input) {
+            input.focus();
+            input.setSelectionRange(input.value.length, input.value.length);
+          }
+        }, 10);
+      });
+      searchField.addEventListener("click", (e) => e.stopPropagation());
+    }
+
+    // Handle selecting an item
+    this.shadowRoot.querySelectorAll(".picker-item").forEach(item => {
+      item.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const val = item.getAttribute("data-val");
+        const key = this._openDropdownKey;
+        this._openDropdownKey = null;
+        this._filterQuery = "";
+        this._valueChanged(key, val);
+        this._render();
+      });
+    });
+
+    // Close dropdown when clicking outside
+    this.shadowRoot.addEventListener("click", () => {
+      if (this._openDropdownKey) {
+        this._openDropdownKey = null;
+        this._filterQuery = "";
+        this._render();
+      }
+    });
+
+    // Bind text and native select change events
+    this.shadowRoot.querySelectorAll("select.native-select").forEach(selectEl => {
       selectEl.addEventListener("change", (e) => {
         const key = e.target.getAttribute("data-key");
         this._valueChanged(key, e.target.value);
       });
     });
 
-    this.shadowRoot.querySelectorAll("input[data-key]").forEach(inputEl => {
+    this.shadowRoot.querySelectorAll("input.text-input").forEach(inputEl => {
       inputEl.addEventListener("change", (e) => {
         const key = e.target.getAttribute("data-key");
         this._valueChanged(key, e.target.value);
