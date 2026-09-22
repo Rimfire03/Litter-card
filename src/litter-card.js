@@ -1,6 +1,6 @@
 import { DEFAULT_IMAGE } from './image-data.js';
 
-const CARD_VERSION = "0.17-dev";
+const CARD_VERSION = "0.18-dev";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -60,6 +60,19 @@ const TRANSLATIONS = {
     language_label: "Langue (optionnel)",
     auto_lang: "Automatique (Langue Home Assistant)",
     sensors_header: "Capteurs d'état & Mesures",
+    search_placeholder: "Rechercher une entité...",
+    domain_sensor: "Capteur",
+    domain_binary_sensor: "Capteur binaire",
+    domain_button: "Bouton",
+    domain_input_button: "Bouton d'entrée",
+    domain_switch: "Interrupteur",
+    domain_input_boolean: "Booléen",
+    domain_number: "Nombre",
+    domain_input_number: "Nombre d'entrée",
+    domain_select: "Sélecteur",
+    domain_input_select: "Sélecteur d'entrée",
+    domain_lock: "Verrou",
+    domain_counter: "Compteur",
   },
   en: {
     default_title: "Cat Litter Box",
@@ -112,6 +125,19 @@ const TRANSLATIONS = {
     language_label: "Language (optional)",
     auto_lang: "Auto (Home Assistant Language)",
     sensors_header: "Sensors & Metrics",
+    search_placeholder: "Search an entity...",
+    domain_sensor: "Sensor",
+    domain_binary_sensor: "Binary sensor",
+    domain_button: "Button",
+    domain_input_button: "Input button",
+    domain_switch: "Switch",
+    domain_input_boolean: "Input boolean",
+    domain_number: "Number",
+    domain_input_number: "Input number",
+    domain_select: "Select",
+    domain_input_select: "Input select",
+    domain_lock: "Lock",
+    domain_counter: "Counter",
   },
   de: {
     default_title: "Katzenklo",
@@ -164,6 +190,19 @@ const TRANSLATIONS = {
     language_label: "Sprache (optional)",
     auto_lang: "Automatisch (Home Assistant Sprache)",
     sensors_header: "Sensoren & Messwerte",
+    search_placeholder: "Entität suchen...",
+    domain_sensor: "Sensor",
+    domain_binary_sensor: "Binärsensor",
+    domain_button: "Taste",
+    domain_input_button: "Eingabetaste",
+    domain_switch: "Schalter",
+    domain_input_boolean: "Boolescher Wert",
+    domain_number: "Nummer",
+    domain_input_number: "Eingabenummer",
+    domain_select: "Auswahl",
+    domain_input_select: "Eingabeauswahl",
+    domain_lock: "Schloss",
+    domain_counter: "Zähler",
   },
   es: {
     default_title: "Arenero Gatos",
@@ -216,6 +255,19 @@ const TRANSLATIONS = {
     language_label: "Idioma (opcional)",
     auto_lang: "Automático (Idioma Home Assistant)",
     sensors_header: "Sensores y Métricas",
+    search_placeholder: "Buscar una entidad...",
+    domain_sensor: "Sensor",
+    domain_binary_sensor: "Sensor binario",
+    domain_button: "Botón",
+    domain_input_button: "Botón de entrada",
+    domain_switch: "Interruptor",
+    domain_input_boolean: "Booleano",
+    domain_number: "Número",
+    domain_input_number: "Número de entrada",
+    domain_select: "Selector",
+    domain_input_select: "Selector de entrada",
+    domain_lock: "Bloqueo",
+    domain_counter: "Contador",
   },
 };
 
@@ -231,6 +283,12 @@ function getLanguage(config, hass) {
 function t(key, lang = "en") {
   const dict = TRANSLATIONS[lang] || TRANSLATIONS.en;
   return dict[key] || TRANSLATIONS.en[key] || key;
+}
+
+function tDomain(domain, lang = "en") {
+  const key = `domain_${domain}`;
+  const dict = TRANSLATIONS[lang] || TRANSLATIONS.en;
+  return dict[key] || TRANSLATIONS.en[key] || domain;
 }
 
 class LitterCard extends HTMLElement {
@@ -1487,7 +1545,7 @@ class LitterCardEditor extends HTMLElement {
                 ${isDropdownOpen ? `
                   <div class="picker-dropdown">
                     <div class="picker-search">
-                      <input type="text" class="search-field" placeholder="🔍 Rechercher..." value="${this._filterQuery}" autofocus>
+                      <input type="text" class="search-field" placeholder="🔍 ${t("search_placeholder", lang)}" value="${this._filterQuery}" autofocus>
                     </div>
                     <div class="picker-options">
                       <div class="picker-item ${!currentVal ? 'active' : ''}" data-val="">
@@ -1498,6 +1556,7 @@ class LitterCardEditor extends HTMLElement {
                       ${filteredEntities.map(e => {
                         const friendly = this._hass?.states[e]?.attributes?.friendly_name || e;
                         const domain = e.split('.')[0];
+                        const domainLabel = tDomain(domain, lang);
                         const isActive = e === currentVal;
                         return `
                           <div class="picker-item ${isActive ? 'active' : ''}" data-val="${e}">
@@ -1505,7 +1564,7 @@ class LitterCardEditor extends HTMLElement {
                               <span class="item-name">${friendly}</span>
                               <span class="item-id">${e}</span>
                             </div>
-                            <span class="item-domain">${domain}</span>
+                            <span class="item-domain">${domainLabel}</span>
                           </div>
                         `;
                       }).join('')}
