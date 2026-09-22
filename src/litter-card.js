@@ -1,6 +1,7 @@
-import { DEFAULT_IMAGE } from './image-data.js';
+import { DEFAULT_IMAGE, MODEL_IMAGES } from './image-data.js';
+import { LITTER_MODELS, DEFAULT_MODEL_ID, getModelConfig } from './models/index.js';
 
-const CARD_VERSION = "0.19";
+const CARD_VERSION = "0.20-dev";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -58,6 +59,7 @@ const TRANSLATIONS = {
     card_title: "Titre de la carte",
     image_url: "URL de l'image (optionnel)",
     language_label: "Langue (optionnel)",
+    model_preset_label: "Modèle de bac à litière",
     auto_lang: "Automatique (Langue Home Assistant)",
     sensors_header: "Capteurs d'état & Mesures",
     search_placeholder: "Rechercher une entité...",
@@ -123,6 +125,7 @@ const TRANSLATIONS = {
     card_title: "Card title",
     image_url: "Image URL (optional)",
     language_label: "Language (optional)",
+    model_preset_label: "Litter Box Model",
     auto_lang: "Auto (Home Assistant Language)",
     sensors_header: "Sensors & Metrics",
     search_placeholder: "Search an entity...",
@@ -188,6 +191,7 @@ const TRANSLATIONS = {
     card_title: "Kartentitel",
     image_url: "Bild-URL (optional)",
     language_label: "Sprache (optional)",
+    model_preset_label: "Katzenklo-Modell",
     auto_lang: "Automatisch (Home Assistant Sprache)",
     sensors_header: "Sensoren & Messwerte",
     search_placeholder: "Entität suchen...",
@@ -253,6 +257,7 @@ const TRANSLATIONS = {
     card_title: "Título de la tarjeta",
     image_url: "URL de imagen (opcional)",
     language_label: "Idioma (opcional)",
+    model_preset_label: "Modelo de arenero",
     auto_lang: "Automático (Idioma Home Assistant)",
     sensors_header: "Sensores y Métricas",
     search_placeholder: "Buscar una entidad...",
@@ -436,6 +441,10 @@ class LitterCard extends HTMLElement {
 
     const lang = getLanguage(this._config, this._hass);
 
+    // Selected Model Preset configuration
+    const modelPreset = getModelConfig(this._config.model || DEFAULT_MODEL_ID);
+    const overlayDefaults = modelPreset?.overlay || {};
+
     // Sensors states
     const occState = this._getState(this._config.sensor_occupancy);
     const isOccupied = occState && (occState.state === "on" || occState.state === "true" || occState.state === "occupied");
@@ -461,26 +470,30 @@ class LitterCard extends HTMLElement {
     const visitsState = this._getState(this._config.sensor_total_visits);
     const durationState = this._getState(this._config.sensor_visit_duration);
 
-    // Image source
-    const imgSrc = this._config.image || DEFAULT_IMAGE;
+    // Image source (custom URL > model embedded image > default image)
+    let modelImgData = DEFAULT_IMAGE;
+    if (modelPreset && modelPreset.image && MODEL_IMAGES && MODEL_IMAGES[modelPreset.image]) {
+      modelImgData = MODEL_IMAGES[modelPreset.image];
+    }
+    const imgSrc = this._config.image || modelImgData;
 
-    // Overlay Geometry Defaults
-    const entranceX = this._config.entrance_pos_x ?? 50;
-    const entranceY = this._config.entrance_pos_y ?? 46.5;
-    const entranceW = this._config.entrance_width ?? 43;
-    const entranceH = this._config.entrance_height ?? 41;
-    const entranceShape = this._config.entrance_shape || "circle";
+    // Overlay Geometry (Card config override > Model preset > hardcoded fallback)
+    const entranceX = this._config.entrance_pos_x ?? overlayDefaults.entrance_pos_x ?? 50;
+    const entranceY = this._config.entrance_pos_y ?? overlayDefaults.entrance_pos_y ?? 46.5;
+    const entranceW = this._config.entrance_width ?? overlayDefaults.entrance_width ?? 43;
+    const entranceH = this._config.entrance_height ?? overlayDefaults.entrance_height ?? 41;
+    const entranceShape = this._config.entrance_shape || overlayDefaults.entrance_shape || "circle";
     let entranceBorderRadius = "50%";
     if (entranceShape === "rounded") entranceBorderRadius = "24px";
     if (entranceShape === "square") entranceBorderRadius = "8px";
 
-    const weightX = this._config.weight_pos_x ?? 81.5;
-    const weightY = this._config.weight_pos_y ?? 78.5;
-    const weightFontSize = this._config.weight_size ?? 1.15;
+    const weightX = this._config.weight_pos_x ?? overlayDefaults.weight_pos_x ?? 81.5;
+    const weightY = this._config.weight_pos_y ?? overlayDefaults.weight_pos_y ?? 78.5;
+    const weightFontSize = this._config.weight_size ?? overlayDefaults.weight_size ?? 1.15;
 
-    const binX = this._config.bin_pos_x ?? 85;
-    const binY = this._config.bin_pos_y ?? 14;
-    const binScale = this._config.bin_scale ?? 1;
+    const binX = this._config.bin_pos_x ?? overlayDefaults.bin_pos_x ?? 85;
+    const binY = this._config.bin_pos_y ?? overlayDefaults.bin_pos_y ?? 14;
+    const binScale = this._config.bin_scale ?? overlayDefaults.bin_scale ?? 1;
 
     // Buttons presence
     const hasBtnClean = Boolean(this._config.btn_clean);
@@ -502,7 +515,7 @@ class LitterCard extends HTMLElement {
     const hasCfgUnit = Boolean(this._config.cfg_unit);
     const hasAnyConfig = hasCfgCalib || hasCfgWait || hasCfgOdor || hasCfgInterval || hasCfgAuto || hasCfgDeep || hasCfgChildLock || hasCfgLitterType || hasCfgUnit;
 
-    const cardTitle = this._config.title || t("default_title", lang);
+    const cardTitle = this._config.title || (modelPreset ? `${modelPreset.name}` : t("default_title", lang));
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -1223,11 +1236,12 @@ class LitterCard extends HTMLElement {
     return {
       type: "custom:litter-card",
       title: "Litière",
+      model: DEFAULT_MODEL_ID,
     };
   }
 }
 
-// GUI Card Editor Component using searchable custom select popup
+// GUI Card Editor Component using searchable custom select popup and model presets
 class LitterCardEditor extends HTMLElement {
   constructor() {
     super();
@@ -1275,6 +1289,51 @@ class LitterCardEditor extends HTMLElement {
     if (!this.shadowRoot) return;
 
     const lang = getLanguage(this._config, this._hass);
+    const currentModelId = this._config.model || DEFAULT_MODEL_ID;
+    const selectedModel = getModelConfig(currentModelId);
+    const modelFeatures = selectedModel?.features || {};
+
+    const modelOptions = Object.keys(LITTER_MODELS).map(key => ({
+      value: key,
+      label: LITTER_MODELS[key].name || key,
+    }));
+
+    // Build fields dynamically based on model supported features
+    const allButtonFields = [
+      { key: "btn_clean", label: `${t("btn_clean", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
+      { key: "btn_level", label: `${t("btn_level", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
+      { key: "btn_bag_replace", label: `${t("btn_bag_replace", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
+      { key: "btn_bag_changed", label: `${t("btn_bag_changed", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
+      { key: "btn_restart", label: `${t("btn_restart", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
+    ];
+
+    const allSensorFields = [
+      { key: "sensor_occupancy", label: `${t("cat_present", lang)} / ${t("litter_free", lang)} (Binary Sensor)`, domains: ["binary_sensor", "sensor", "input_boolean"] },
+      { key: "sensor_cat_weight", label: `${t("weight_tooltip", lang)} (Sensor)`, domains: ["sensor", "input_number"] },
+      { key: "sensor_bin_full", label: `${t("bin_full_alert", lang)} (Binary Sensor)`, domains: ["binary_sensor", "sensor", "input_boolean"] },
+      { key: "sensor_status", label: `${t("status_standby", lang)} / Status (Sensor)`, domains: ["sensor"] },
+      { key: "sensor_problem", label: `${t("status_problem", lang)} (Binary Sensor)`, domains: ["binary_sensor", "sensor"] },
+      { key: "sensor_cleanings_count", label: `${t("stat_cleanings", lang)} (Sensor)`, domains: ["sensor", "input_number", "counter"] },
+      { key: "sensor_total_visits", label: `${t("stat_visits", lang)} (Sensor)`, domains: ["sensor", "input_number", "counter"] },
+      { key: "sensor_visit_duration", label: `${t("stat_duration", lang)} (Sensor)`, domains: ["sensor", "input_number"] },
+    ];
+
+    const allSettingFields = [
+      { key: "cfg_auto_clean", label: `${t("cfg_auto_clean", lang)} (Switch)`, domains: ["switch", "input_boolean"] },
+      { key: "cfg_deep_clean", label: `${t("cfg_deep_clean", lang)} (Switch)`, domains: ["switch", "input_boolean"] },
+      { key: "cfg_odor_removal", label: `${t("cfg_odor_removal", lang)} (Switch)`, domains: ["switch", "input_boolean"] },
+      { key: "cfg_child_lock", label: `${t("cfg_child_lock", lang)} (Lock / Switch)`, domains: ["lock", "switch", "input_boolean"] },
+      { key: "cfg_clean_wait_time", label: `${t("cfg_clean_wait_time", lang)} (Number)`, domains: ["number", "input_number", "sensor"] },
+      { key: "cfg_clean_interval", label: `${t("cfg_clean_interval", lang)} (Number)`, domains: ["number", "input_number", "sensor"] },
+      { key: "cfg_bin_calibration", label: `${t("cfg_bin_calibration", lang)} (Number)`, domains: ["number", "input_number", "sensor"] },
+      { key: "cfg_litter_type", label: `${t("cfg_litter_type", lang)} (Select)`, domains: ["select", "input_select"] },
+      { key: "cfg_unit", label: `${t("cfg_unit", lang)} (Select)`, domains: ["select", "input_select"] },
+    ];
+
+    // Filter by model features if specified, otherwise include all
+    const activeButtons = modelFeatures.buttons ? allButtonFields.filter(f => modelFeatures.buttons.includes(f.key)) : allButtonFields;
+    const activeSensors = modelFeatures.sensors ? allSensorFields.filter(f => modelFeatures.sensors.includes(f.key)) : allSensorFields;
+    const activeSettings = modelFeatures.settings ? allSettingFields.filter(f => modelFeatures.settings.includes(f.key)) : allSettingFields;
 
     const fields = [
       { key: "title", label: t("card_title", lang), type: "text" },
@@ -1291,34 +1350,18 @@ class LitterCardEditor extends HTMLElement {
           { value: "es", label: "Español (ES)" },
         ]
       },
+      {
+        key: "model",
+        label: t("model_preset_label", lang),
+        type: "select_options",
+        options: modelOptions,
+      },
       // Buttons
-      { header: t("sec_controls", lang) },
-      { key: "btn_clean", label: `${t("btn_clean", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
-      { key: "btn_level", label: `${t("btn_level", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
-      { key: "btn_bag_replace", label: `${t("btn_bag_replace", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
-      { key: "btn_bag_changed", label: `${t("btn_bag_changed", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
-      { key: "btn_restart", label: `${t("btn_restart", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
+      ...(activeButtons.length > 0 ? [{ header: t("sec_controls", lang) }, ...activeButtons] : []),
       // Sensors
-      { header: t("sensors_header", lang) },
-      { key: "sensor_occupancy", label: `${t("cat_present", lang)} / ${t("litter_free", lang)} (Binary Sensor)`, domains: ["binary_sensor", "sensor", "input_boolean"] },
-      { key: "sensor_cat_weight", label: `${t("weight_tooltip", lang)} (Sensor)`, domains: ["sensor", "input_number"] },
-      { key: "sensor_bin_full", label: `${t("bin_full_alert", lang)} (Binary Sensor)`, domains: ["binary_sensor", "sensor", "input_boolean"] },
-      { key: "sensor_status", label: `${t("status_standby", lang)} / Status (Sensor)`, domains: ["sensor"] },
-      { key: "sensor_problem", label: `${t("status_problem", lang)} (Binary Sensor)`, domains: ["binary_sensor", "sensor"] },
-      { key: "sensor_cleanings_count", label: `${t("stat_cleanings", lang)} (Sensor)`, domains: ["sensor", "input_number", "counter"] },
-      { key: "sensor_total_visits", label: `${t("stat_visits", lang)} (Sensor)`, domains: ["sensor", "input_number", "counter"] },
-      { key: "sensor_visit_duration", label: `${t("stat_duration", lang)} (Sensor)`, domains: ["sensor", "input_number"] },
-      // Configuration
-      { header: t("sec_settings", lang) },
-      { key: "cfg_auto_clean", label: `${t("cfg_auto_clean", lang)} (Switch)`, domains: ["switch", "input_boolean"] },
-      { key: "cfg_deep_clean", label: `${t("cfg_deep_clean", lang)} (Switch)`, domains: ["switch", "input_boolean"] },
-      { key: "cfg_odor_removal", label: `${t("cfg_odor_removal", lang)} (Switch)`, domains: ["switch", "input_boolean"] },
-      { key: "cfg_child_lock", label: `${t("cfg_child_lock", lang)} (Lock / Switch)`, domains: ["lock", "switch", "input_boolean"] },
-      { key: "cfg_clean_wait_time", label: `${t("cfg_clean_wait_time", lang)} (Number)`, domains: ["number", "input_number", "sensor"] },
-      { key: "cfg_clean_interval", label: `${t("cfg_clean_interval", lang)} (Number)`, domains: ["number", "input_number", "sensor"] },
-      { key: "cfg_bin_calibration", label: `${t("cfg_bin_calibration", lang)} (Number)`, domains: ["number", "input_number", "sensor"] },
-      { key: "cfg_litter_type", label: `${t("cfg_litter_type", lang)} (Select)`, domains: ["select", "input_select"] },
-      { key: "cfg_unit", label: `${t("cfg_unit", lang)} (Select)`, domains: ["select", "input_select"] },
+      ...(activeSensors.length > 0 ? [{ header: t("sensors_header", lang) }, ...activeSensors] : []),
+      // Settings
+      ...(activeSettings.length > 0 ? [{ header: t("sec_settings", lang) }, ...activeSettings] : []),
     ];
 
     const allEntities = this._hass ? Object.keys(this._hass.states).sort() : [];
@@ -1499,7 +1542,7 @@ class LitterCardEditor extends HTMLElement {
             `;
           }
           if (field.type === "select_options") {
-            const currentVal = (this._config && this._config[field.key]) || '';
+            const currentVal = (this._config && this._config[field.key]) || (field.key === 'model' ? DEFAULT_MODEL_ID : '');
             return `
               <div class="row">
                 <span class="label">${field.label}</span>
@@ -1643,6 +1686,9 @@ class LitterCardEditor extends HTMLElement {
       selectEl.addEventListener("change", (e) => {
         const key = e.target.getAttribute("data-key");
         this._valueChanged(key, e.target.value);
+        if (key === 'model') {
+          this._render();
+        }
       });
     });
 
