@@ -1,6 +1,6 @@
 import { DEFAULT_IMAGE } from './image-data.js';
 
-const CARD_VERSION = "0.15-dev";
+const CARD_VERSION = "0.16-dev";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -60,7 +60,6 @@ const TRANSLATIONS = {
     language_label: "Langue (optionnel)",
     auto_lang: "Automatique (Langue Home Assistant)",
     sensors_header: "Capteurs d'état & Mesures",
-    search_placeholder: "Rechercher une entité...",
   },
   en: {
     default_title: "Cat Litter Box",
@@ -113,7 +112,6 @@ const TRANSLATIONS = {
     language_label: "Language (optional)",
     auto_lang: "Auto (Home Assistant Language)",
     sensors_header: "Sensors & Metrics",
-    search_placeholder: "Search an entity...",
   },
   de: {
     default_title: "Katzenklo",
@@ -166,7 +164,6 @@ const TRANSLATIONS = {
     language_label: "Sprache (optional)",
     auto_lang: "Automatisch (Home Assistant Sprache)",
     sensors_header: "Sensoren & Messwerte",
-    search_placeholder: "Entität suchen...",
   },
   es: {
     default_title: "Arenero Gatos",
@@ -199,7 +196,7 @@ const TRANSLATIONS = {
     btn_restart: "Reiniciar",
     sec_settings: "Ajustes y Configuración",
     cfg_auto_clean: "Limpieza automática",
-    cfg_auto_clean_desc: "Iniciar un ciclo después de cada visita",
+    cfg_auto_clean_desc: "Iniciar un cycle después de cada visita",
     cfg_deep_clean: "Limpieza profunda",
     cfg_deep_clean_desc: "Ciclo exhaustivo de rotación del tambor",
     cfg_odor_removal: "Desodorización",
@@ -219,7 +216,6 @@ const TRANSLATIONS = {
     language_label: "Idioma (opcional)",
     auto_lang: "Automático (Idioma Home Assistant)",
     sensors_header: "Sensores y Métricas",
-    search_placeholder: "Buscar una entidad...",
   },
 };
 
@@ -1173,7 +1169,7 @@ class LitterCard extends HTMLElement {
   }
 }
 
-// GUI Card Editor Component
+// GUI Card Editor Component using ha-form or native Home Assistant ha-entity-picker
 class LitterCardEditor extends HTMLElement {
   constructor() {
     super();
@@ -1192,6 +1188,16 @@ class LitterCardEditor extends HTMLElement {
     this._hass = hass;
     if (shouldRender) {
       this._render();
+    } else {
+      // Update hass property on all ha-entity-picker or ha-form elements
+      const pickers = this.shadowRoot.querySelectorAll("ha-entity-picker");
+      pickers.forEach(picker => {
+        picker.hass = hass;
+      });
+      const haForm = this.shadowRoot.querySelector("ha-form");
+      if (haForm) {
+        haForm.hass = hass;
+      }
     }
   }
 
@@ -1202,25 +1208,7 @@ class LitterCardEditor extends HTMLElement {
     if (value === "" || value === null || value === undefined) {
       delete newConfig[key];
     } else {
-      // Auto-cast numbers if key is numeric
-      if (
-        [
-          "entrance_pos_x",
-          "entrance_pos_y",
-          "entrance_width",
-          "entrance_height",
-          "weight_pos_x",
-          "weight_pos_y",
-          "weight_size",
-          "bin_pos_x",
-          "bin_pos_y",
-          "bin_scale",
-        ].includes(key)
-      ) {
-        newConfig[key] = isNaN(value) ? value : parseFloat(value);
-      } else {
-        newConfig[key] = value;
-      }
+      newConfig[key] = value;
     }
 
     this._config = newConfig;
@@ -1233,11 +1221,113 @@ class LitterCardEditor extends HTMLElement {
     this.dispatchEvent(event);
   }
 
+  _computeSchema(lang) {
+    return [
+      { name: "title", label: t("card_title", lang), selector: { text: {} } },
+      { name: "image", label: t("image_url", lang), selector: { text: {} } },
+      {
+        name: "language",
+        label: t("language_label", lang),
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: [
+              { value: "", label: t("auto_lang", lang) },
+              { value: "fr", label: "Français (FR)" },
+              { value: "en", label: "English (EN)" },
+              { value: "de", label: "Deutsch (DE)" },
+              { value: "es", label: "Español (ES)" },
+            ]
+          }
+        }
+      },
+      // Contrôles manuels
+      {
+        name: "sec_controls",
+        type: "constant",
+        label: `🔧 ${t("sec_controls", lang)}`,
+      },
+      { name: "btn_clean", label: `${t("btn_clean", lang)} (Button)`, selector: { entity: { domain: ["button", "input_button", "switch"] } } },
+      { name: "btn_level", label: `${t("btn_level", lang)} (Button)`, selector: { entity: { domain: ["button", "input_button", "switch"] } } },
+      { name: "btn_bag_replace", label: `${t("btn_bag_replace", lang)} (Button)`, selector: { entity: { domain: ["button", "input_button", "switch"] } } },
+      { name: "btn_bag_changed", label: `${t("btn_bag_changed", lang)} (Button)`, selector: { entity: { domain: ["button", "input_button", "switch"] } } },
+      { name: "btn_restart", label: `${t("btn_restart", lang)} (Button)`, selector: { entity: { domain: ["button", "input_button", "switch"] } } },
+      
+      // Capteurs
+      {
+        name: "sec_sensors",
+        type: "constant",
+        label: `📊 ${t("sensors_header", lang)}`,
+      },
+      { name: "sensor_occupancy", label: `${t("cat_present", lang)} / ${t("litter_free", lang)} (Binary Sensor)`, selector: { entity: { domain: ["binary_sensor", "sensor", "input_boolean"] } } },
+      { name: "sensor_cat_weight", label: `${t("weight_tooltip", lang)} (Sensor)`, selector: { entity: { domain: ["sensor", "input_number"] } } },
+      { name: "sensor_bin_full", label: `${t("bin_full_alert", lang)} (Binary Sensor)`, selector: { entity: { domain: ["binary_sensor", "sensor", "input_boolean"] } } },
+      { name: "sensor_status", label: `${t("status_standby", lang)} / Status (Sensor)`, selector: { entity: { domain: ["sensor"] } } },
+      { name: "sensor_problem", label: `${t("status_problem", lang)} (Binary Sensor)`, selector: { entity: { domain: ["binary_sensor", "sensor"] } } },
+      { name: "sensor_cleanings_count", label: `${t("stat_cleanings", lang)} (Sensor)`, selector: { entity: { domain: ["sensor", "input_number", "counter"] } } },
+      { name: "sensor_total_visits", label: `${t("stat_visits", lang)} (Sensor)`, selector: { entity: { domain: ["sensor", "input_number", "counter"] } } },
+      { name: "sensor_visit_duration", label: `${t("stat_duration", lang)} (Sensor)`, selector: { entity: { domain: ["sensor", "input_number"] } } },
+
+      // Configuration & Options
+      {
+        name: "sec_settings",
+        type: "constant",
+        label: `⚙️ ${t("sec_settings", lang)}`,
+      },
+      { name: "cfg_auto_clean", label: `${t("cfg_auto_clean", lang)} (Switch)`, selector: { entity: { domain: ["switch", "input_boolean"] } } },
+      { name: "cfg_deep_clean", label: `${t("cfg_deep_clean", lang)} (Switch)`, selector: { entity: { domain: ["switch", "input_boolean"] } } },
+      { name: "cfg_odor_removal", label: `${t("cfg_odor_removal", lang)} (Switch)`, selector: { entity: { domain: ["switch", "input_boolean"] } } },
+      { name: "cfg_child_lock", label: `${t("cfg_child_lock", lang)} (Lock / Switch)`, selector: { entity: { domain: ["lock", "switch", "input_boolean"] } } },
+      { name: "cfg_clean_wait_time", label: `${t("cfg_clean_wait_time", lang)} (Number)`, selector: { entity: { domain: ["number", "input_number", "sensor"] } } },
+      { name: "cfg_clean_interval", label: `${t("cfg_clean_interval", lang)} (Number)`, selector: { entity: { domain: ["number", "input_number", "sensor"] } } },
+      { name: "cfg_bin_calibration", label: `${t("cfg_bin_calibration", lang)} (Number)`, selector: { entity: { domain: ["number", "input_number", "sensor"] } } },
+      { name: "cfg_litter_type", label: `${t("cfg_litter_type", lang)} (Select)`, selector: { entity: { domain: ["select", "input_select"] } } },
+      { name: "cfg_unit", label: `${t("cfg_unit", lang)} (Select)`, selector: { entity: { domain: ["select", "input_select"] } } },
+    ];
+  }
+
   _render() {
     if (!this.shadowRoot) return;
 
     const lang = getLanguage(this._config, this._hass);
 
+    // If Home Assistant's native ha-form is available, use it directly (standard HA form with native entity selectors)
+    if (customElements.get("ha-form")) {
+      const schema = this._computeSchema(lang).filter(f => f.type !== "constant");
+      
+      this.shadowRoot.innerHTML = `
+        <style>
+          .editor-container {
+            padding: 8px 0;
+            font-family: var(--paper-font-body1_-_font-family, sans-serif);
+          }
+        </style>
+        <div class="editor-container">
+          <ha-form
+            .hass=${this._hass}
+            .data=${this._config}
+            .schema=${schema}
+            .computeLabel=${schemaItem => schemaItem.label || schemaItem.name}
+          ></ha-form>
+        </div>
+      `;
+
+      const haForm = this.shadowRoot.querySelector("ha-form");
+      if (haForm) {
+        haForm.addEventListener("value-changed", (ev) => {
+          this._config = ev.detail.value;
+          const event = new CustomEvent("config-changed", {
+            detail: { config: this._config },
+            bubbles: true,
+            composed: true,
+          });
+          this.dispatchEvent(event);
+        });
+      }
+      return;
+    }
+
+    // Fallback using native ha-entity-picker elements
     const fields = [
       { key: "title", label: t("card_title", lang), type: "text" },
       { key: "image", label: t("image_url", lang), type: "text" },
@@ -1255,42 +1345,40 @@ class LitterCardEditor extends HTMLElement {
       },
       // Buttons
       { header: t("sec_controls", lang) },
-      { key: "btn_clean", label: `${t("btn_clean", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
-      { key: "btn_level", label: `${t("btn_level", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
-      { key: "btn_bag_replace", label: `${t("btn_bag_replace", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
-      { key: "btn_bag_changed", label: `${t("btn_bag_changed", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
-      { key: "btn_restart", label: `${t("btn_restart", lang)} (Button)`, domains: ["button", "input_button", "switch"] },
+      { key: "btn_clean", label: `${t("btn_clean", lang)} (Button)`, domain: "button" },
+      { key: "btn_level", label: `${t("btn_level", lang)} (Button)`, domain: "button" },
+      { key: "btn_bag_replace", label: `${t("btn_bag_replace", lang)} (Button)`, domain: "button" },
+      { key: "btn_bag_changed", label: `${t("btn_bag_changed", lang)} (Button)`, domain: "button" },
+      { key: "btn_restart", label: `${t("btn_restart", lang)} (Button)`, domain: "button" },
       // Sensors
       { header: t("sensors_header", lang) },
-      { key: "sensor_occupancy", label: `${t("cat_present", lang)} / ${t("litter_free", lang)} (Binary Sensor)`, domains: ["binary_sensor", "sensor", "input_boolean"] },
-      { key: "sensor_cat_weight", label: `${t("weight_tooltip", lang)} (Sensor)`, domains: ["sensor", "input_number"] },
-      { key: "sensor_bin_full", label: `${t("bin_full_alert", lang)} (Binary Sensor)`, domains: ["binary_sensor", "sensor", "input_boolean"] },
-      { key: "sensor_status", label: `${t("status_standby", lang)} / Status (Sensor)`, domains: ["sensor"] },
-      { key: "sensor_problem", label: `${t("status_problem", lang)} (Binary Sensor)`, domains: ["binary_sensor", "sensor"] },
-      { key: "sensor_cleanings_count", label: `${t("stat_cleanings", lang)} (Sensor)`, domains: ["sensor", "input_number", "counter"] },
-      { key: "sensor_total_visits", label: `${t("stat_visits", lang)} (Sensor)`, domains: ["sensor", "input_number", "counter"] },
-      { key: "sensor_visit_duration", label: `${t("stat_duration", lang)} (Sensor)`, domains: ["sensor", "input_number"] },
+      { key: "sensor_occupancy", label: `${t("cat_present", lang)} / ${t("litter_free", lang)} (Binary Sensor)`, domain: "binary_sensor" },
+      { key: "sensor_cat_weight", label: `${t("weight_tooltip", lang)} (Sensor)`, domain: "sensor" },
+      { key: "sensor_bin_full", label: `${t("bin_full_alert", lang)} (Binary Sensor)`, domain: "binary_sensor" },
+      { key: "sensor_status", label: `${t("status_standby", lang)} / Status (Sensor)`, domain: "sensor" },
+      { key: "sensor_problem", label: `${t("status_problem", lang)} (Binary Sensor)`, domain: "binary_sensor" },
+      { key: "sensor_cleanings_count", label: `${t("stat_cleanings", lang)} (Sensor)`, domain: "sensor" },
+      { key: "sensor_total_visits", label: `${t("stat_visits", lang)} (Sensor)`, domain: "sensor" },
+      { key: "sensor_visit_duration", label: `${t("stat_duration", lang)} (Sensor)`, domain: "sensor" },
       // Configuration
       { header: t("sec_settings", lang) },
-      { key: "cfg_auto_clean", label: `${t("cfg_auto_clean", lang)} (Switch)`, domains: ["switch", "input_boolean"] },
-      { key: "cfg_deep_clean", label: `${t("cfg_deep_clean", lang)} (Switch)`, domains: ["switch", "input_boolean"] },
-      { key: "cfg_odor_removal", label: `${t("cfg_odor_removal", lang)} (Switch)`, domains: ["switch", "input_boolean"] },
-      { key: "cfg_child_lock", label: `${t("cfg_child_lock", lang)} (Lock / Switch)`, domains: ["lock", "switch", "input_boolean"] },
-      { key: "cfg_clean_wait_time", label: `${t("cfg_clean_wait_time", lang)} (Number)`, domains: ["number", "input_number", "sensor"] },
-      { key: "cfg_clean_interval", label: `${t("cfg_clean_interval", lang)} (Number)`, domains: ["number", "input_number", "sensor"] },
-      { key: "cfg_bin_calibration", label: `${t("cfg_bin_calibration", lang)} (Number)`, domains: ["number", "input_number", "sensor"] },
-      { key: "cfg_litter_type", label: `${t("cfg_litter_type", lang)} (Select)`, domains: ["select", "input_select"] },
-      { key: "cfg_unit", label: `${t("cfg_unit", lang)} (Select)`, domains: ["select", "input_select"] },
+      { key: "cfg_auto_clean", label: `${t("cfg_auto_clean", lang)} (Switch)`, domain: "switch" },
+      { key: "cfg_deep_clean", label: `${t("cfg_deep_clean", lang)} (Switch)`, domain: "switch" },
+      { key: "cfg_odor_removal", label: `${t("cfg_odor_removal", lang)} (Switch)`, domain: "switch" },
+      { key: "cfg_child_lock", label: `${t("cfg_child_lock", lang)} (Lock / Switch)`, domain: "lock" },
+      { key: "cfg_clean_wait_time", label: `${t("cfg_clean_wait_time", lang)} (Number)`, domain: "number" },
+      { key: "cfg_clean_interval", label: `${t("cfg_clean_interval", lang)} (Number)`, domain: "number" },
+      { key: "cfg_bin_calibration", label: `${t("cfg_bin_calibration", lang)} (Number)`, domain: "number" },
+      { key: "cfg_litter_type", label: `${t("cfg_litter_type", lang)} (Select)`, domain: "select" },
+      { key: "cfg_unit", label: `${t("cfg_unit", lang)} (Select)`, domain: "select" },
     ];
-
-    const allEntities = this._hass ? Object.keys(this._hass.states).sort() : [];
 
     this.shadowRoot.innerHTML = `
       <style>
         .editor-container {
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 14px;
           padding: 8px 0;
           font-family: var(--paper-font-body1_-_font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
         }
@@ -1328,16 +1416,9 @@ class LitterCardEditor extends HTMLElement {
           border-color: var(--primary-color, #0284c7);
           box-shadow: 0 0 0 1px var(--primary-color, #0284c7);
         }
-        .entity-select-container {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-        .search-input {
-          font-size: 0.8rem;
-          padding: 6px 10px;
-          background: rgba(125, 125, 125, 0.05);
-          border-style: dashed;
+        ha-entity-picker {
+          width: 100%;
+          display: block;
         }
       </style>
       <div class="editor-container">
@@ -1354,15 +1435,6 @@ class LitterCardEditor extends HTMLElement {
               </div>
             `;
           }
-          if (field.type === "number") {
-            const currentVal = (this._config && this._config[field.key] !== undefined) ? this._config[field.key] : (field.default ?? '');
-            return `
-              <div class="row">
-                <span class="label">${field.label}</span>
-                <input type="number" min="${field.min}" max="${field.max}" step="${field.step}" data-key="${field.key}" value="${currentVal}">
-              </div>
-            `;
-          }
           if (field.type === "select_options") {
             const currentVal = (this._config && this._config[field.key]) || '';
             return `
@@ -1375,37 +1447,34 @@ class LitterCardEditor extends HTMLElement {
             `;
           }
 
-          // Entity dropdown list (optionally prioritized by matching domains)
+          // Native Home Assistant Entity Picker
           const currentVal = (this._config && this._config[field.key]) || '';
-          let matchedEntities = allEntities;
-          if (field.domains && field.domains.length > 0) {
-            const primary = allEntities.filter(e => field.domains.some(d => e.startsWith(d + ".")));
-            const others = allEntities.filter(e => !field.domains.some(d => e.startsWith(d + ".")));
-            matchedEntities = [...primary, ...others];
-          }
-
           return `
             <div class="row">
               <span class="label">${field.label}</span>
-              <div class="entity-select-container">
-                <input type="text" class="search-input" data-filter-for="${field.key}" placeholder="🔍 ${t("search_placeholder", lang)}">
-                <select data-key="${field.key}" data-select-key="${field.key}">
-                  <option value="" data-search="">${t("not_configured", lang)}</option>
-                  ${matchedEntities.map(e => {
-                    const friendly = this._hass?.states[e]?.attributes?.friendly_name || e;
-                    const isSelected = e === currentVal;
-                    const searchText = (friendly + ' ' + e).toLowerCase();
-                    return `<option value="${e}" data-search="${searchText}" ${isSelected ? 'selected' : ''}>${friendly} (${e})</option>`;
-                  }).join('')}
-                </select>
-              </div>
+              <ha-entity-picker
+                data-key="${field.key}"
+                .hass=${this._hass}
+                .value=${currentVal}
+                .includeDomains=${field.domain ? [field.domain] : undefined}
+                allow-custom-entity
+              ></ha-entity-picker>
             </div>
           `;
         }).join('')}
       </div>
     `;
 
-    // Bind change/input events safely
+    // Bind entity-picker events
+    this.shadowRoot.querySelectorAll("ha-entity-picker").forEach(picker => {
+      picker.hass = this._hass;
+      picker.addEventListener("value-changed", (e) => {
+        const key = picker.getAttribute("data-key");
+        this._valueChanged(key, e.detail.value);
+      });
+    });
+
+    // Bind change/input events for text and selects
     this.shadowRoot.querySelectorAll("select[data-key]").forEach(selectEl => {
       selectEl.addEventListener("change", (e) => {
         const key = e.target.getAttribute("data-key");
@@ -1414,35 +1483,9 @@ class LitterCardEditor extends HTMLElement {
     });
 
     this.shadowRoot.querySelectorAll("input[data-key]").forEach(inputEl => {
-      inputEl.addEventListener("input", (e) => {
-        const key = e.target.getAttribute("data-key");
-        this._valueChanged(key, e.target.value);
-      });
       inputEl.addEventListener("change", (e) => {
         const key = e.target.getAttribute("data-key");
         this._valueChanged(key, e.target.value);
-      });
-    });
-
-    // Real-time entity search filtering per dropdown
-    this.shadowRoot.querySelectorAll("input[data-filter-for]").forEach(filterInput => {
-      filterInput.addEventListener("input", (e) => {
-        const fieldKey = e.target.getAttribute("data-filter-for");
-        const query = (e.target.value || '').toLowerCase().trim();
-        const targetSelect = this.shadowRoot.querySelector(`select[data-select-key="${fieldKey}"]`);
-        if (!targetSelect) return;
-
-        Array.from(targetSelect.options).forEach((opt, idx) => {
-          if (idx === 0) return; // Keep "None (Disabled)" always visible
-          const searchData = opt.getAttribute("data-search") || opt.textContent.toLowerCase();
-          if (!query || searchData.includes(query)) {
-            opt.hidden = false;
-            opt.style.display = "";
-          } else {
-            opt.hidden = true;
-            opt.style.display = "none";
-          }
-        });
       });
     });
   }
