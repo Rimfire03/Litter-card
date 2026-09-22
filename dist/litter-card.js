@@ -113,7 +113,7 @@ export function getModelConfig(modelId) {
 }
 
 
-const CARD_VERSION = "0.20-dev";
+const CARD_VERSION = "0.21-dev";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -174,6 +174,22 @@ const TRANSLATIONS = {
     model_preset_label: "Modèle de bac à litière",
     auto_lang: "Automatique (Langue Home Assistant)",
     sensors_header: "Capteurs d'état & Mesures",
+    sec_positioning: "Ajustement & Personnalisation de l'image",
+    opt_entrance_pos_x: "Position X de l'entrée (%)",
+    opt_entrance_pos_y: "Position Y de l'entrée (%)",
+    opt_entrance_width: "Largeur de l'entrée (%)",
+    opt_entrance_height: "Hauteur de l'entrée (%)",
+    opt_entrance_shape: "Forme de l'entrée",
+    opt_weight_pos_x: "Position X du poids (%)",
+    opt_weight_pos_y: "Position Y du poids (%)",
+    opt_weight_size: "Taille du texte poids (rem)",
+    opt_bin_pos_x: "Position X alerte sac (%)",
+    opt_bin_pos_y: "Position Y alerte sac (%)",
+    opt_bin_scale: "Échelle alerte sac",
+    shape_circle: "Cercle",
+    shape_ellipse: "Ellipse",
+    shape_rounded: "Rectangle arrondi",
+    shape_square: "Rectangle",
     search_placeholder: "Rechercher une entité...",
     domain_sensor: "Capteur",
     domain_binary_sensor: "Capteur binaire",
@@ -240,6 +256,22 @@ const TRANSLATIONS = {
     model_preset_label: "Litter Box Model",
     auto_lang: "Auto (Home Assistant Language)",
     sensors_header: "Sensors & Metrics",
+    sec_positioning: "Image Overlay Customization & Positioning",
+    opt_entrance_pos_x: "Entrance Position X (%)",
+    opt_entrance_pos_y: "Entrance Position Y (%)",
+    opt_entrance_width: "Entrance Width (%)",
+    opt_entrance_height: "Entrance Height (%)",
+    opt_entrance_shape: "Entrance Shape",
+    opt_weight_pos_x: "Weight Position X (%)",
+    opt_weight_pos_y: "Weight Position Y (%)",
+    opt_weight_size: "Weight font size (rem)",
+    opt_bin_pos_x: "Bin Alert Position X (%)",
+    opt_bin_pos_y: "Bin Alert Position Y (%)",
+    opt_bin_scale: "Bin Alert Scale",
+    shape_circle: "Circle",
+    shape_ellipse: "Ellipse",
+    shape_rounded: "Rounded rectangle",
+    shape_square: "Rectangle",
     search_placeholder: "Search an entity...",
     domain_sensor: "Sensor",
     domain_binary_sensor: "Binary sensor",
@@ -306,6 +338,22 @@ const TRANSLATIONS = {
     model_preset_label: "Katzenklo-Modell",
     auto_lang: "Automatisch (Home Assistant Sprache)",
     sensors_header: "Sensoren & Messwerte",
+    sec_positioning: "Bildanpassung & Positionierung",
+    opt_entrance_pos_x: "Eingang Position X (%)",
+    opt_entrance_pos_y: "Eingang Position Y (%)",
+    opt_entrance_width: "Eingang Breite (%)",
+    opt_entrance_height: "Eingang Höhe (%)",
+    opt_entrance_shape: "Eingangsform",
+    opt_weight_pos_x: "Gewicht Position X (%)",
+    opt_weight_pos_y: "Gewicht Position Y (%)",
+    opt_weight_size: "Gewicht Schriftgröße (rem)",
+    opt_bin_pos_x: "Beutel-Warnung Position X (%)",
+    opt_bin_pos_y: "Beutel-Warnung Position Y (%)",
+    opt_bin_scale: "Beutel-Warnung Skalierung",
+    shape_circle: "Kreis",
+    shape_ellipse: "Ellipse",
+    shape_rounded: "Abgerundetes Rechteck",
+    shape_square: "Rechteck",
     search_placeholder: "Entität suchen...",
     domain_sensor: "Sensor",
     domain_binary_sensor: "Binärsensor",
@@ -372,6 +420,22 @@ const TRANSLATIONS = {
     model_preset_label: "Modelo de arenero",
     auto_lang: "Automático (Idioma Home Assistant)",
     sensors_header: "Sensores y Métricas",
+    sec_positioning: "Ajuste y Personalización de la imagen",
+    opt_entrance_pos_x: "Posición X de la entrada (%)",
+    opt_entrance_pos_y: "Posición Y de la entrada (%)",
+    opt_entrance_width: "Ancho de la entrada (%)",
+    opt_entrance_height: "Alto de la entrada (%)",
+    opt_entrance_shape: "Forma de la entrada",
+    opt_weight_pos_x: "Posición X del peso (%)",
+    opt_weight_pos_y: "Posición Y del peso (%)",
+    opt_weight_size: "Tamaño fuente peso (rem)",
+    opt_bin_pos_x: "Posición X alerta bolsa (%)",
+    opt_bin_pos_y: "Posición Y alerta bolsa (%)",
+    opt_bin_scale: "Escala alerta bolsa",
+    shape_circle: "Círculo",
+    shape_ellipse: "Elipse",
+    shape_rounded: "Rectángulo redondeado",
+    shape_square: "Rectángulo",
     search_placeholder: "Buscar una entidad...",
     domain_sensor: "Sensor",
     domain_binary_sensor: "Sensor binario",
@@ -1384,7 +1448,24 @@ class LitterCardEditor extends HTMLElement {
     if (value === "" || value === null || value === undefined) {
       delete newConfig[key];
     } else {
-      newConfig[key] = value;
+      if (
+        [
+          "entrance_pos_x",
+          "entrance_pos_y",
+          "entrance_width",
+          "entrance_height",
+          "weight_pos_x",
+          "weight_pos_y",
+          "weight_size",
+          "bin_pos_x",
+          "bin_pos_y",
+          "bin_scale",
+        ].includes(key)
+      ) {
+        newConfig[key] = isNaN(value) ? value : parseFloat(value);
+      } else {
+        newConfig[key] = value;
+      }
     }
 
     this._config = newConfig;
@@ -1474,6 +1555,29 @@ class LitterCardEditor extends HTMLElement {
       ...(activeSensors.length > 0 ? [{ header: t("sensors_header", lang) }, ...activeSensors] : []),
       // Settings
       ...(activeSettings.length > 0 ? [{ header: t("sec_settings", lang) }, ...activeSettings] : []),
+      // Custom Positioning & Sizing
+      { header: t("sec_positioning", lang) },
+      { key: "entrance_pos_x", label: t("opt_entrance_pos_x", lang), type: "number", min: 0, max: 100, step: 0.5, default: selectedModel?.overlay?.entrance_pos_x ?? 50 },
+      { key: "entrance_pos_y", label: t("opt_entrance_pos_y", lang), type: "number", min: 0, max: 100, step: 0.5, default: selectedModel?.overlay?.entrance_pos_y ?? 46.5 },
+      { key: "entrance_width", label: t("opt_entrance_width", lang), type: "number", min: 10, max: 100, step: 0.5, default: selectedModel?.overlay?.entrance_width ?? 43 },
+      { key: "entrance_height", label: t("opt_entrance_height", lang), type: "number", min: 10, max: 100, step: 0.5, default: selectedModel?.overlay?.entrance_height ?? 41 },
+      {
+        key: "entrance_shape",
+        label: t("opt_entrance_shape", lang),
+        type: "select_options",
+        options: [
+          { value: "circle", label: t("shape_circle", lang) },
+          { value: "ellipse", label: t("shape_ellipse", lang) },
+          { value: "rounded", label: t("shape_rounded", lang) },
+          { value: "square", label: t("shape_square", lang) },
+        ]
+      },
+      { key: "weight_pos_x", label: t("opt_weight_pos_x", lang), type: "number", min: 0, max: 100, step: 0.5, default: selectedModel?.overlay?.weight_pos_x ?? 81.5 },
+      { key: "weight_pos_y", label: t("opt_weight_pos_y", lang), type: "number", min: 0, max: 100, step: 0.5, default: selectedModel?.overlay?.weight_pos_y ?? 78.5 },
+      { key: "weight_size", label: t("opt_weight_size", lang), type: "number", min: 0.5, max: 3, step: 0.05, default: selectedModel?.overlay?.weight_size ?? 1.15 },
+      { key: "bin_pos_x", label: t("opt_bin_pos_x", lang), type: "number", min: 0, max: 100, step: 0.5, default: selectedModel?.overlay?.bin_pos_x ?? 85 },
+      { key: "bin_pos_y", label: t("opt_bin_pos_y", lang), type: "number", min: 0, max: 100, step: 0.5, default: selectedModel?.overlay?.bin_pos_y ?? 14 },
+      { key: "bin_scale", label: t("opt_bin_scale", lang), type: "number", min: 0.5, max: 2, step: 0.05, default: selectedModel?.overlay?.bin_scale ?? 1 },
     ];
 
     const allEntities = this._hass ? Object.keys(this._hass.states).sort() : [];
@@ -1653,6 +1757,15 @@ class LitterCardEditor extends HTMLElement {
               </div>
             `;
           }
+          if (field.type === "number") {
+            const currentVal = (this._config && this._config[field.key] !== undefined) ? this._config[field.key] : (field.default ?? '');
+            return `
+              <div class="row">
+                <span class="label">${field.label}</span>
+                <input type="number" class="text-input" min="${field.min}" max="${field.max}" step="${field.step}" data-key="${field.key}" value="${currentVal}">
+              </div>
+            `;
+          }
           if (field.type === "select_options") {
             const currentVal = (this._config && this._config[field.key]) || (field.key === 'model' ? DEFAULT_MODEL_ID : '');
             return `
@@ -1805,6 +1918,10 @@ class LitterCardEditor extends HTMLElement {
     });
 
     this.shadowRoot.querySelectorAll("input.text-input").forEach(inputEl => {
+      inputEl.addEventListener("input", (e) => {
+        const key = e.target.getAttribute("data-key");
+        this._valueChanged(key, e.target.value);
+      });
       inputEl.addEventListener("change", (e) => {
         const key = e.target.getAttribute("data-key");
         this._valueChanged(key, e.target.value);
