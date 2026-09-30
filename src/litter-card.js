@@ -1,7 +1,7 @@
 import { DEFAULT_IMAGE, MODEL_IMAGES } from './image-data.js';
 import { LITTER_MODELS, DEFAULT_MODEL_ID, getModelConfig } from './models/index.js';
 
-const CARD_VERSION = "0.28";
+const CARD_VERSION = "0.29";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -79,18 +79,6 @@ const TRANSLATIONS = {
     shape_rounded: "Rectangle arrondi",
     shape_square: "Rectangle",
     search_placeholder: "Rechercher une entité...",
-    domain_sensor: "Capteur",
-    domain_binary_sensor: "Capteur binaire",
-    domain_button: "Bouton",
-    domain_input_button: "Bouton d'entrée",
-    domain_switch: "Interrupteur",
-    domain_input_boolean: "Booléen",
-    domain_number: "Nombre",
-    domain_input_number: "Nombre d'entrée",
-    domain_select: "Sélecteur",
-    domain_input_select: "Sélecteur d'entrée",
-    domain_lock: "Verrou",
-    domain_counter: "Compteur",
   },
   en: {
     default_title: "Cat Litter Box",
@@ -161,18 +149,6 @@ const TRANSLATIONS = {
     shape_rounded: "Rounded rectangle",
     shape_square: "Rectangle",
     search_placeholder: "Search an entity...",
-    domain_sensor: "Sensor",
-    domain_binary_sensor: "Binary sensor",
-    domain_button: "Button",
-    domain_input_button: "Input button",
-    domain_switch: "Switch",
-    domain_input_boolean: "Input boolean",
-    domain_number: "Number",
-    domain_input_number: "Input number",
-    domain_select: "Select",
-    domain_input_select: "Input select",
-    domain_lock: "Lock",
-    domain_counter: "Counter",
   },
   de: {
     default_title: "Katzenklo",
@@ -243,18 +219,6 @@ const TRANSLATIONS = {
     shape_rounded: "Abgerundetes Rechteck",
     shape_square: "Rechteck",
     search_placeholder: "Entität suchen...",
-    domain_sensor: "Sensor",
-    domain_binary_sensor: "Binärsensor",
-    domain_button: "Taste",
-    domain_input_button: "Eingabetaste",
-    domain_switch: "Schalter",
-    domain_input_boolean: "Boolescher Wert",
-    domain_number: "Nummer",
-    domain_input_number: "Eingabenummer",
-    domain_select: "Auswahl",
-    domain_input_select: "Eingabeauswahl",
-    domain_lock: "Schloss",
-    domain_counter: "Zähler",
   },
   es: {
     default_title: "Arenero Gatos",
@@ -325,18 +289,6 @@ const TRANSLATIONS = {
     shape_rounded: "Rectángulo redondeado",
     shape_square: "Rectángulo",
     search_placeholder: "Buscar una entidad...",
-    domain_sensor: "Sensor",
-    domain_binary_sensor: "Sensor binario",
-    domain_button: "Botón",
-    domain_input_button: "Botón de entrada",
-    domain_switch: "Interruptor",
-    domain_input_boolean: "Booleano",
-    domain_number: "Número",
-    domain_input_number: "Número de entrada",
-    domain_select: "Selector",
-    domain_input_select: "Selector de entrada",
-    domain_lock: "Bloqueo",
-    domain_counter: "Contador",
   },
 };
 
@@ -354,10 +306,10 @@ function t(key, lang = "en") {
   return dict[key] || TRANSLATIONS.en[key] || key;
 }
 
-function tDomain(domain, lang = "en") {
-  const key = `domain_${domain}`;
-  const dict = TRANSLATIONS[lang] || TRANSLATIONS.en;
-  return dict[key] || TRANSLATIONS.en[key] || domain;
+function tDomain(domain, hass) {
+  const localized = hass?.localize?.(`component.${domain}.entity_component._.name`);
+  if (localized) return localized;
+  return domain.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 class LitterCard extends HTMLElement {
@@ -1737,7 +1689,7 @@ class LitterCardEditor extends HTMLElement {
                       ${filteredEntities.map(e => {
                         const friendly = this._hass?.states[e]?.attributes?.friendly_name || e;
                         const domain = e.split('.')[0];
-                        const domainLabel = tDomain(domain, lang);
+                        const domainLabel = tDomain(domain, this._hass);
                         const isActive = e === currentVal;
                         return `
                           <div class="picker-item ${isActive ? 'active' : ''}" data-val="${e}">
