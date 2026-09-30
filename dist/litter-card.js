@@ -125,7 +125,7 @@ export function getModelConfig(modelId) {
 }
 
 
-const CARD_VERSION = "0.29";
+const CARD_VERSION = "0.30";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -161,7 +161,7 @@ const TRANSLATIONS = {
     btn_clean: "Nettoyer",
     btn_level: "Niveler",
     btn_bag_replace: "Remplacer sac",
-    btn_bag_changed: "changer la litiere",
+    btn_bag_changed: "Changer la litière",
     btn_restart: "Redémarrer",
     sec_settings: "Paramètres & Configuration",
     cfg_auto_clean: "Nettoyage automatique",

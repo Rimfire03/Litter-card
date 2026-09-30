@@ -180,7 +180,7 @@ cfg_unit: select.cat_litter_box_unit
   - **Affichage du Poids du Chat** : valeur en temps réel intégrée directement dans le rond noir inférieur.
   - **Alerte Sac Plein** : badge dynamique et animé en haut à droite de l'image.
 - **Statistiques en un coup d'œil** : Nombre de nettoyages, nombre total de visites et durée du passage.
-- **Boutons de Contrôle Manuel** : Nettoyer, Niveler, Remplacement du sac, changer la litiere, Redémarrer.
+- **Boutons de Contrôle Manuel** : Nettoyer, Niveler, Remplacement du sac, Changer la litière, Redémarrer.
 - **Menu Déroulant Paramètres & Configuration** :
   - Nettoyage automatique (Interrupteur)
   - Nettoyage intensif (Interrupteur)
