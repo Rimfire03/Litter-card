@@ -1,7 +1,7 @@
 import { DEFAULT_IMAGE, MODEL_IMAGES } from './image-data.js';
 import { LITTER_MODELS, DEFAULT_MODEL_ID, getModelConfig } from './models/index.js';
 
-const CARD_VERSION = "0.30";
+const CARD_VERSION = "0.31";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -319,6 +319,7 @@ class LitterCard extends HTMLElement {
     this._config = {};
     this._hass = null;
     this._configOpen = false;
+    this._bagReplaceActive = false;
   }
 
   setConfig(config) {
@@ -1033,7 +1034,7 @@ class LitterCard extends HTMLElement {
               ` : ''}
 
               ${hasBtnBagReplace ? `
-                <button class="action-btn secondary" id="btn_bag_replace">
+                <button class="action-btn ${this._bagReplaceActive ? '' : 'secondary'}" id="btn_bag_replace">
                   <ha-icon icon="mdi:sack" style="--mdc-icon-size: 18px;"></ha-icon>
                   <span>${t("btn_bag_replace", lang)}</span>
                 </button>
@@ -1228,7 +1229,16 @@ class LitterCard extends HTMLElement {
     }
     const btnBagReplace = root.getElementById("btn_bag_replace");
     if (btnBagReplace) {
-      btnBagReplace.addEventListener("click", () => this._pressButton(this._config.btn_bag_replace));
+      btnBagReplace.addEventListener("click", () => {
+        if (this._bagReplaceActive) {
+          this._bagReplaceActive = false;
+          this._pressButton(this._config.btn_clean);
+        } else {
+          this._bagReplaceActive = true;
+          this._pressButton(this._config.btn_bag_replace);
+        }
+        this._render();
+      });
     }
     const btnBagChanged = root.getElementById("btn_bag_changed");
     if (btnBagChanged) {
