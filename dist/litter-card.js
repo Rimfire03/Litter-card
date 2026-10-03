@@ -125,7 +125,7 @@ export function getModelConfig(modelId) {
 }
 
 
-const CARD_VERSION = "0.31";
+const CARD_VERSION = "0.32";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -1345,7 +1345,13 @@ class LitterCard extends HTMLElement {
     // Button actions
     const btnClean = root.getElementById("btn_clean");
     if (btnClean) {
-      btnClean.addEventListener("click", () => this._pressButton(this._config.btn_clean));
+      btnClean.addEventListener("click", () => {
+        this._pressButton(this._config.btn_clean);
+        if (this._bagReplaceActive) {
+          this._bagReplaceActive = false;
+          this._render();
+        }
+      });
     }
     const btnLevel = root.getElementById("btn_level");
     if (btnLevel) {
