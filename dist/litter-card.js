@@ -125,7 +125,7 @@ export function getModelConfig(modelId) {
 }
 
 
-const CARD_VERSION = "0.36";
+const CARD_VERSION = "0.37";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -444,6 +444,22 @@ function tDomain(domain, hass) {
   return domain.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+const STATUS_ALIASES = {
+  cleaning: ["cleaning", "nettoyage", "nettoyage en cours"],
+  smoothing: ["smoothing", "leveling", "lissage", "nivellement"],
+  emptying: ["emptying", "vidange", "vidage", "vidage en cours"],
+  full: ["full", "plein", "sac plein"],
+  unavailable: ["unavailable", "indisponible"],
+};
+
+function canonicalStatus(stateStr) {
+  const s = String(stateStr ?? "").trim().toLowerCase();
+  for (const [key, aliases] of Object.entries(STATUS_ALIASES)) {
+    if (aliases.includes(s)) return key;
+  }
+  return s;
+}
+
 class LitterCard extends HTMLElement {
   constructor() {
     super();
@@ -582,7 +598,7 @@ class LitterCard extends HTMLElement {
       off: t("status_off", lang),
       unavailable: t("status_unavailable", lang),
     };
-    return map[String(stateStr).toLowerCase()] || stateStr;
+    return map[canonicalStatus(stateStr)] || stateStr;
   }
 
   _render() {
@@ -614,7 +630,7 @@ class LitterCard extends HTMLElement {
 
     const statusState = this._getState(this._config.sensor_status);
     const statusText = statusState ? this._formatStatus(statusState.state, lang) : (isOccupied ? t("status_occupied", lang) : t("status_ready", lang));
-    const rawStatus = statusState ? String(statusState.state).toLowerCase() : "";
+    const rawStatus = statusState ? canonicalStatus(statusState.state) : "";
     const isStatusFull = rawStatus === "full";
     const isOffline = rawStatus === "unavailable";
     const blinkClean = rawStatus === "cleaning" ? "blink" : "";
