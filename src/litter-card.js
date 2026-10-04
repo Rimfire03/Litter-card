@@ -1,7 +1,7 @@
 import { DEFAULT_IMAGE, MODEL_IMAGES } from './image-data.js';
 import { LITTER_MODELS, DEFAULT_MODEL_ID, getModelConfig } from './models/index.js';
 
-const CARD_VERSION = "0.35";
+const CARD_VERSION = "0.36";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -1089,7 +1089,7 @@ class LitterCard extends HTMLElement {
               ` : ''}
 
               ${hasBtnBagReplace ? `
-                <button class="action-btn secondary" id="btn_bag_replace">
+                <button class="action-btn secondary ${isStatusFull ? 'blink' : ''}" id="btn_bag_replace">
                   <ha-icon icon="mdi:sack" style="--mdc-icon-size: 18px;"></ha-icon>
                   <span>${t("btn_bag_replace", lang)}</span>
                 </button>
