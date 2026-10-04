@@ -1,7 +1,7 @@
 import { DEFAULT_IMAGE, MODEL_IMAGES } from './image-data.js';
 import { LITTER_MODELS, DEFAULT_MODEL_ID, getModelConfig } from './models/index.js';
 
-const CARD_VERSION = "0.32";
+const CARD_VERSION = "0.33";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -482,6 +482,11 @@ class LitterCard extends HTMLElement {
 
     const statusState = this._getState(this._config.sensor_status);
     const statusText = statusState ? this._formatStatus(statusState.state, lang) : (isOccupied ? t("status_occupied", lang) : t("status_ready", lang));
+    const rawStatus = statusState ? String(statusState.state).toLowerCase() : "";
+    const isStatusFull = rawStatus === "full";
+    const blinkClean = rawStatus === "cleaning" ? "blink" : "";
+    const blinkLevel = rawStatus === "smoothing" ? "blink" : "";
+    const blinkBagChanged = rawStatus === "emptying" ? "blink" : "";
 
     const cleaningsState = this._getState(this._config.sensor_cleanings_count);
     const visitsState = this._getState(this._config.sensor_total_visits);
@@ -805,6 +810,28 @@ class LitterCard extends HTMLElement {
         .action-btn.warning:hover {
           background: rgba(239, 68, 68, 0.2);
         }
+        .action-btn.blink {
+          animation: btn-blink 1.2s ease-in-out infinite;
+        }
+        @keyframes btn-blink {
+          0%, 100% { box-shadow: 0 0 0 0 transparent; }
+          50% { box-shadow: 0 0 0 3px var(--primary-color, #0284c7), 0 0 14px var(--primary-color, #0284c7); }
+        }
+
+        /* Bag full: status badge turns orange and blinks */
+        .status-badge.full {
+          background: rgba(255, 152, 0, 0.15);
+          color: #e65100;
+          animation: badge-blink 1.2s ease-in-out infinite;
+        }
+        .status-badge.full .status-dot {
+          background: #ff9800;
+          box-shadow: 0 0 8px #ff9800;
+        }
+        @keyframes badge-blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.35; }
+        }
 
         /* Collapsible Configuration Section */
         .config-accordion {
@@ -950,7 +977,7 @@ class LitterCard extends HTMLElement {
             <ha-icon icon="mdi:cat" style="color: var(--primary-color, #0284c7);"></ha-icon>
             <div class="title">${cardTitle}</div>
           </div>
-          <div class="status-badge">
+          <div class="status-badge ${isStatusFull ? 'full' : ''}">
             <div class="status-dot"></div>
             <span>${statusText}</span>
           </div>
@@ -1020,14 +1047,14 @@ class LitterCard extends HTMLElement {
             <div class="section-title">${t("sec_controls", lang)}</div>
             <div class="buttons-grid">
               ${hasBtnClean ? `
-                <button class="action-btn" id="btn_clean">
+                <button class="action-btn ${blinkClean}" id="btn_clean">
                   <ha-icon icon="mdi:shimmer" style="--mdc-icon-size: 18px;"></ha-icon>
                   <span>${t("btn_clean", lang)}</span>
                 </button>
               ` : ''}
 
               ${hasBtnLevel ? `
-                <button class="action-btn secondary" id="btn_level">
+                <button class="action-btn secondary ${blinkLevel}" id="btn_level">
                   <ha-icon icon="mdi:arrow-collapse-down" style="--mdc-icon-size: 18px;"></ha-icon>
                   <span>${t("btn_level", lang)}</span>
                 </button>
@@ -1041,7 +1068,7 @@ class LitterCard extends HTMLElement {
               ` : ''}
 
               ${hasBtnBagChanged ? `
-                <button class="action-btn secondary" id="btn_bag_changed">
+                <button class="action-btn secondary ${blinkBagChanged}" id="btn_bag_changed">
                   <ha-icon icon="mdi:delete-empty" style="--mdc-icon-size: 18px;"></ha-icon>
                   <span>${t("btn_bag_changed", lang)}</span>
                 </button>
