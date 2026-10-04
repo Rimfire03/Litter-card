@@ -125,7 +125,7 @@ export function getModelConfig(modelId) {
 }
 
 
-const CARD_VERSION = "0.34";
+const CARD_VERSION = "0.35";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -151,6 +151,8 @@ const TRANSLATIONS = {
     status_problem: "Erreur détectée",
     cat_present: "Chat présent",
     litter_free: "Libre",
+    litter_offline: "Litière hors ligne",
+    status_unavailable: "Indisponible",
     bin_full_alert: "Sac plein !",
     bin_ok: "Sac OK",
     weight_tooltip: "Dernier poids mesuré",
@@ -221,6 +223,8 @@ const TRANSLATIONS = {
     status_problem: "Problem detected",
     cat_present: "Cat inside",
     litter_free: "Clear",
+    litter_offline: "Litter box offline",
+    status_unavailable: "Unavailable",
     bin_full_alert: "Bag full!",
     bin_ok: "Bag OK",
     weight_tooltip: "Last measured weight",
@@ -291,6 +295,8 @@ const TRANSLATIONS = {
     status_problem: "Fehler erkannt",
     cat_present: "Katze anwesend",
     litter_free: "Frei",
+    litter_offline: "Katzenklo offline",
+    status_unavailable: "Nicht verfügbar",
     bin_full_alert: "Beutel voll!",
     bin_ok: "Beutel OK",
     weight_tooltip: "Zuletzt gemessenes Gewicht",
@@ -361,6 +367,8 @@ const TRANSLATIONS = {
     status_problem: "Error detectado",
     cat_present: "Gato dentro",
     litter_free: "Libre",
+    litter_offline: "Arenero sin conexión",
+    status_unavailable: "No disponible",
     bin_full_alert: "¡Bolsa llena!",
     bin_ok: "Bolsa OK",
     weight_tooltip: "Último peso medido",
@@ -572,6 +580,7 @@ class LitterCard extends HTMLElement {
       full: t("status_full", lang),
       on: t("status_on", lang),
       off: t("status_off", lang),
+      unavailable: t("status_unavailable", lang),
     };
     return map[String(stateStr).toLowerCase()] || stateStr;
   }
@@ -607,6 +616,7 @@ class LitterCard extends HTMLElement {
     const statusText = statusState ? this._formatStatus(statusState.state, lang) : (isOccupied ? t("status_occupied", lang) : t("status_ready", lang));
     const rawStatus = statusState ? String(statusState.state).toLowerCase() : "";
     const isStatusFull = rawStatus === "full";
+    const isOffline = rawStatus === "unavailable";
     const blinkClean = rawStatus === "cleaning" ? "blink" : "";
     const blinkLevel = rawStatus === "smoothing" ? "blink" : "";
     const blinkBagChanged = rawStatus === "emptying" ? "blink" : "";
@@ -956,6 +966,25 @@ class LitterCard extends HTMLElement {
           50% { opacity: 0.35; }
         }
 
+        /* Device unavailable: red status badge, grey entrance circle */
+        .status-badge.offline {
+          background: rgba(239, 68, 68, 0.12);
+          color: #d32f2f;
+        }
+        .status-badge.offline .status-dot {
+          background: #f44336;
+          box-shadow: none;
+          animation: none;
+        }
+        .entrance-glow.offline {
+          background: radial-gradient(ellipse at center, rgba(120, 120, 120, 0.45) 0%, rgba(120, 120, 120, 0.2) 60%, rgba(120, 120, 120, 0) 85%);
+          border-color: rgba(120, 120, 120, 0.6);
+          box-shadow: inset 0 0 25px rgba(120, 120, 120, 0.5);
+        }
+        .entrance-badge.offline {
+          background: rgba(90, 90, 90, 0.85);
+        }
+
         /* Collapsible Configuration Section */
         .config-accordion {
           border-radius: 12px;
@@ -1100,7 +1129,7 @@ class LitterCard extends HTMLElement {
             <ha-icon icon="mdi:cat" style="color: var(--primary-color, #0284c7);"></ha-icon>
             <div class="title">${cardTitle}</div>
           </div>
-          <div class="status-badge ${isStatusFull ? 'full' : ''}">
+          <div class="status-badge ${isOffline ? 'offline' : (isStatusFull ? 'full' : '')}">
             <div class="status-dot"></div>
             <span>${statusText}</span>
           </div>
@@ -1111,15 +1140,15 @@ class LitterCard extends HTMLElement {
           <img class="litter-img" src="${imgSrc}" alt="${cardTitle}" />
 
           <!-- Entrance Light / Occupancy Indicator -->
-          <div class="entrance-glow">
-            <div class="entrance-badge">
-              <ha-icon icon="${isOccupied ? 'mdi:cat' : 'mdi:check-circle'}" style="--mdc-icon-size: 14px;"></ha-icon>
-              <span>${isOccupied ? t("cat_present", lang) : t("litter_free", lang)}</span>
+          <div class="entrance-glow ${isOffline ? 'offline' : ''}">
+            <div class="entrance-badge ${isOffline ? 'offline' : ''}">
+              <ha-icon icon="${isOffline ? 'mdi:wifi-off' : (isOccupied ? 'mdi:cat' : 'mdi:check-circle')}" style="--mdc-icon-size: 14px;"></ha-icon>
+              <span>${isOffline ? t("litter_offline", lang) : (isOccupied ? t("cat_present", lang) : t("litter_free", lang))}</span>
             </div>
           </div>
 
           <!-- Bin status overlay -->
-          ${this._config.sensor_bin_full ? `
+          ${this._config.sensor_bin_full && !isOffline ? `
             <div class="bin-status-overlay">
               <ha-icon icon="${isBinFull ? 'mdi:delete-alert' : 'mdi:delete-outline'}" style="--mdc-icon-size: 16px;"></ha-icon>
               <span>${isBinFull ? t("bin_full_alert", lang) : t("bin_ok", lang)}</span>
