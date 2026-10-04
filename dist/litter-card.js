@@ -125,7 +125,7 @@ export function getModelConfig(modelId) {
 }
 
 
-const CARD_VERSION = "0.33";
+const CARD_VERSION = "0.34";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -443,7 +443,6 @@ class LitterCard extends HTMLElement {
     this._config = {};
     this._hass = null;
     this._configOpen = false;
-    this._bagReplaceActive = false;
   }
 
   setConfig(config) {
@@ -1185,7 +1184,7 @@ class LitterCard extends HTMLElement {
               ` : ''}
 
               ${hasBtnBagReplace ? `
-                <button class="action-btn ${this._bagReplaceActive ? '' : 'secondary'}" id="btn_bag_replace">
+                <button class="action-btn secondary" id="btn_bag_replace">
                   <ha-icon icon="mdi:sack" style="--mdc-icon-size: 18px;"></ha-icon>
                   <span>${t("btn_bag_replace", lang)}</span>
                 </button>
@@ -1372,13 +1371,7 @@ class LitterCard extends HTMLElement {
     // Button actions
     const btnClean = root.getElementById("btn_clean");
     if (btnClean) {
-      btnClean.addEventListener("click", () => {
-        this._pressButton(this._config.btn_clean);
-        if (this._bagReplaceActive) {
-          this._bagReplaceActive = false;
-          this._render();
-        }
-      });
+      btnClean.addEventListener("click", () => this._pressButton(this._config.btn_clean));
     }
     const btnLevel = root.getElementById("btn_level");
     if (btnLevel) {
@@ -1386,16 +1379,7 @@ class LitterCard extends HTMLElement {
     }
     const btnBagReplace = root.getElementById("btn_bag_replace");
     if (btnBagReplace) {
-      btnBagReplace.addEventListener("click", () => {
-        if (this._bagReplaceActive) {
-          this._bagReplaceActive = false;
-          this._pressButton(this._config.btn_clean);
-        } else {
-          this._bagReplaceActive = true;
-          this._pressButton(this._config.btn_bag_replace);
-        }
-        this._render();
-      });
+      btnBagReplace.addEventListener("click", () => this._pressButton(this._config.btn_bag_replace));
     }
     const btnBagChanged = root.getElementById("btn_bag_changed");
     if (btnBagChanged) {
