@@ -1,7 +1,7 @@
 import { DEFAULT_IMAGE, MODEL_IMAGES } from './image-data.js';
 import { LITTER_MODELS, DEFAULT_MODEL_ID, getModelConfig } from './models/index.js';
 
-const CARD_VERSION = "0.37";
+const CARD_VERSION = "0.38";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -1141,16 +1141,16 @@ class LitterCard extends HTMLElement {
 
             <div class="config-body">
               <!-- Nettoyage automatique -->
-              ${hasCfgAuto ? this._renderSwitchRow("cfg_auto_clean", t("cfg_auto_clean", lang), t("cfg_auto_clean_desc", lang)) : ''}
+              ${hasCfgAuto ? this._renderToggleRow("cfg_auto_clean", t("cfg_auto_clean", lang), t("cfg_auto_clean_desc", lang), ["on", "true"]) : ''}
 
               <!-- Nettoyage intensif -->
-              ${hasCfgDeep ? this._renderSwitchRow("cfg_deep_clean", t("cfg_deep_clean", lang), t("cfg_deep_clean_desc", lang)) : ''}
+              ${hasCfgDeep ? this._renderToggleRow("cfg_deep_clean", t("cfg_deep_clean", lang), t("cfg_deep_clean_desc", lang), ["on", "true"]) : ''}
 
               <!-- Désodorisation après nettoyage -->
-              ${hasCfgOdor ? this._renderSwitchRow("cfg_odor_removal", t("cfg_odor_removal", lang), t("cfg_odor_removal_desc", lang)) : ''}
+              ${hasCfgOdor ? this._renderToggleRow("cfg_odor_removal", t("cfg_odor_removal", lang), t("cfg_odor_removal_desc", lang), ["on", "true"]) : ''}
 
               <!-- Sécurité enfants -->
-              ${hasCfgChildLock ? this._renderLockRow("cfg_child_lock", t("cfg_child_lock", lang), t("cfg_child_lock_desc", lang)) : ''}
+              ${hasCfgChildLock ? this._renderToggleRow("cfg_child_lock", t("cfg_child_lock", lang), t("cfg_child_lock_desc", lang), ["locked"]) : ''}
 
               <!-- Délai de nettoyage -->
               ${hasCfgWait ? this._renderSliderRow("cfg_clean_wait_time", t("cfg_clean_wait_time", lang), t("unit_min", lang), 0, 60, 1) : ''}
@@ -1189,11 +1189,10 @@ class LitterCard extends HTMLElement {
     return false;
   }
 
-  _renderSwitchRow(configKey, title, desc) {
-    const entityId = this._config[configKey];
-    const stateObj = this._getState(entityId);
-    let isOn = stateObj && (stateObj.state === "on" || stateObj.state === "true");
-    
+  _renderToggleRow(configKey, title, desc, activeStates) {
+    const stateObj = this._getState(this._config[configKey]);
+    let isOn = Boolean(stateObj && activeStates.includes(stateObj.state));
+
     // Apply inversion if configured in model or card
     if (this._isSwitchInverted(configKey)) {
       isOn = !isOn;
@@ -1207,30 +1206,6 @@ class LitterCard extends HTMLElement {
         </div>
         <label class="switch">
           <input type="checkbox" id="${configKey}" ${isOn ? 'checked' : ''}>
-          <span class="slider-switch"></span>
-        </label>
-      </div>
-    `;
-  }
-
-  _renderLockRow(configKey, title, desc) {
-    const entityId = this._config[configKey];
-    const stateObj = this._getState(entityId);
-    let isLocked = stateObj && stateObj.state === "locked";
-
-    // Apply inversion if configured in model or card
-    if (this._isSwitchInverted(configKey)) {
-      isLocked = !isLocked;
-    }
-
-    return `
-      <div class="config-row">
-        <div class="config-label-group">
-          <span class="config-label">${title}</span>
-          ${desc ? `<span class="config-desc">${desc}</span>` : ''}
-        </div>
-        <label class="switch">
-          <input type="checkbox" id="${configKey}" ${isLocked ? 'checked' : ''}>
           <span class="slider-switch"></span>
         </label>
       </div>
@@ -1290,26 +1265,13 @@ class LitterCard extends HTMLElement {
     }
 
     // Button actions
-    const btnClean = root.getElementById("btn_clean");
-    if (btnClean) {
-      btnClean.addEventListener("click", () => this._pressButton(this._config.btn_clean));
-    }
-    const btnLevel = root.getElementById("btn_level");
-    if (btnLevel) {
-      btnLevel.addEventListener("click", () => this._pressButton(this._config.btn_level));
-    }
-    const btnBagReplace = root.getElementById("btn_bag_replace");
-    if (btnBagReplace) {
-      btnBagReplace.addEventListener("click", () => this._pressButton(this._config.btn_bag_replace));
-    }
-    const btnBagChanged = root.getElementById("btn_bag_changed");
-    if (btnBagChanged) {
-      btnBagChanged.addEventListener("click", () => this._pressButton(this._config.btn_bag_changed));
-    }
-    const btnRestart = root.getElementById("btn_restart");
-    if (btnRestart) {
-      btnRestart.addEventListener("click", () => this._pressButton(this._config.btn_restart));
-    }
+    const buttons = ["btn_clean", "btn_level", "btn_bag_replace", "btn_bag_changed", "btn_restart"];
+    buttons.forEach(key => {
+      const el = root.getElementById(key);
+      if (el) {
+        el.addEventListener("click", () => this._pressButton(this._config[key]));
+      }
+    });
 
     // Switch toggles
     const switches = ["cfg_auto_clean", "cfg_deep_clean", "cfg_odor_removal", "cfg_child_lock"];
