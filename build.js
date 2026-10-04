@@ -120,8 +120,12 @@ litterCardContent = litterCardContent.replace(
 // Save updated src/litter-card.js
 fs.writeFileSync(path.join(srcDir, 'litter-card.js'), litterCardContent, 'utf8');
 
+// 5. Inline the styles module
+const stylesContent = fs.readFileSync(path.join(srcDir, 'styles.js'), 'utf8');
+
 // Replace imports with inlined bundles for standalone file
 let bundledContent = litterCardContent
+  .replace("import { getCardStyles, EDITOR_STYLES } from './styles.js';", () => stylesContent)
   .replace("import { DEFAULT_IMAGE } from './image-data.js';", imageDataJsContent)
   .replace("import { DEFAULT_IMAGE, MODEL_IMAGES } from './image-data.js';", imageDataJsContent)
   .replace("import { LITTER_MODELS, DEFAULT_MODEL_ID, getModelConfig } from './models/index.js';", modelsJsBundle);
