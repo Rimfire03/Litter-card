@@ -43,9 +43,7 @@ export default {
       "sensor_problem",
       "sensor_cleanings_count",
       "sensor_total_visits",
-      "sensor_visit_duration",
-      "sensor_litter_changed",
-    ],
+      "sensor_visit_duration",    ],
     settings: [
       "cfg_auto_clean",
       "cfg_deep_clean",

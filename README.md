@@ -45,6 +45,7 @@ If you find this card helpful, consider buying me a coffee to support the develo
   - **Waste Bin Status Alert**: Animated badge in the top right corner when the bag is full.
 - **Quick Statistics Overview**: Cleanings count, total visit counter, and duration of the last visit.
 - **Manual Control Action Buttons**: Clean, Level litter, Replace bag, Bag changed confirmation, and Restart device.
+- **Last litter change date**: shown on the image and recorded by the card each time the "Bag changed" button is pressed (stored per Home Assistant user, with browser storage as fallback).
 - **Collapsible Settings & Configuration Accordion**:
   - Auto clean toggle (Switch)
   - Deep clean toggle (Switch)
@@ -145,7 +146,6 @@ cfg_unit: select.cat_litter_box_unit
 | `sensor_cleanings_count` | Sensor | Cleanings counter tile |
 | `sensor_total_visits` | Sensor | Total visits counter tile |
 | `sensor_visit_duration` | Sensor | Last visit duration tile |
-| `sensor_litter_changed` | `input_datetime` / date or timestamp sensor | Date of the last litter change, shown on the image |
 | `cfg_auto_clean` | Switch entity | Auto-clean switch toggle |
 | `cfg_deep_clean` | Switch entity | Deep clean switch toggle |
 | `cfg_odor_removal` | Switch entity | Odor removal post-clean switch toggle |
@@ -184,6 +184,7 @@ cfg_unit: select.cat_litter_box_unit
   - **Alerte Sac Plein** : badge dynamique et animé en haut à droite de l'image.
 - **Statistiques en un coup d'œil** : Nombre de nettoyages, nombre total de visites et durée du passage.
 - **Boutons de Contrôle Manuel** : Nettoyer, Niveler, Remplacement du sac, Changer la litière, Redémarrer.
+- **Date du dernier changement de litière** : affichée sur l'image et enregistrée par la carte à chaque appui sur « Changer la litière » (stockée par utilisateur Home Assistant, avec le navigateur en secours).
 - **Menu Déroulant Paramètres & Configuration** :
   - Nettoyage automatique (Interrupteur)
   - Nettoyage intensif (Interrupteur)

@@ -43,8 +43,7 @@ export const LITTER_MODELS = {
         "sensor_problem",
         "sensor_cleanings_count",
         "sensor_total_visits",
-        "sensor_visit_duration",
-        "sensor_litter_changed"
+        "sensor_visit_duration"
       ],
       "settings": [
         "cfg_auto_clean",
@@ -102,8 +101,7 @@ export const LITTER_MODELS = {
         "sensor_problem",
         "sensor_cleanings_count",
         "sensor_total_visits",
-        "sensor_visit_duration",
-        "sensor_litter_changed"
+        "sensor_visit_duration"
       ],
       "settings": [
         "cfg_auto_clean",
@@ -781,7 +779,7 @@ export const EDITOR_STYLES = `
 `;
 
 
-const CARD_VERSION = "0.40";
+const CARD_VERSION = "0.41";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -1112,6 +1110,8 @@ function tDomain(domain, hass) {
   return domain.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+const LITTER_DATE_STORE_KEY = "litter_card_litter_changed";
+
 function formatDateState(stateStr, lang) {
   if (!stateStr || stateStr === "unknown" || stateStr === "unavailable") return "--";
   const s = String(stateStr).trim();
@@ -1146,6 +1146,8 @@ class LitterCard extends HTMLElement {
     this._config = {};
     this._hass = null;
     this._configOpen = false;
+    this._litterChangedAt = null;
+    this._litterDateLoadedFor = null;
   }
 
   setConfig(config) {
@@ -1159,8 +1161,55 @@ class LitterCard extends HTMLElement {
   set hass(hass) {
     const oldHass = this._hass;
     this._hass = hass;
+    this._loadLitterDate();
     if (this._hasChanged(oldHass, hass)) {
       this._render();
+    }
+  }
+
+  async _loadLitterDate() {
+    const id = this._config.btn_bag_changed;
+    if (!id || !this._hass || this._litterDateLoadedFor === id) return;
+    this._litterDateLoadedFor = id;
+    this._litterChangedAt = null;
+
+    let value = null;
+    try {
+      const res = await this._hass.callWS({ type: "frontend/get_user_data", key: LITTER_DATE_STORE_KEY });
+      value = res?.value?.[id] ?? null;
+    } catch (err) {
+      console.warn("litter-card: cannot read stored litter change date", err);
+    }
+    if (!value) {
+      try {
+        value = localStorage.getItem(`${LITTER_DATE_STORE_KEY}:${id}`);
+      } catch (err) {}
+    }
+    if (value && this._config.btn_bag_changed === id) {
+      this._litterChangedAt = value;
+      this._render();
+    }
+  }
+
+  async _markLitterChanged() {
+    const id = this._config.btn_bag_changed;
+    if (!id) return;
+    const now = new Date().toISOString();
+    this._litterChangedAt = now;
+    this._render();
+
+    try {
+      localStorage.setItem(`${LITTER_DATE_STORE_KEY}:${id}`, now);
+    } catch (err) {}
+    try {
+      const res = await this._hass.callWS({ type: "frontend/get_user_data", key: LITTER_DATE_STORE_KEY });
+      await this._hass.callWS({
+        type: "frontend/set_user_data",
+        key: LITTER_DATE_STORE_KEY,
+        value: { ...(res?.value || {}), [id]: now },
+      });
+    } catch (err) {
+      console.warn("litter-card: cannot store litter change date", err);
     }
   }
 
@@ -1173,7 +1222,6 @@ class LitterCard extends HTMLElement {
       this._config.btn_bag_replace,
       this._config.btn_bag_changed,
       this._config.sensor_visit_duration,
-      this._config.sensor_litter_changed,
       this._config.sensor_cleanings_count,
       this._config.sensor_total_visits,
       this._config.sensor_occupancy,
@@ -1320,8 +1368,7 @@ class LitterCard extends HTMLElement {
     const cleaningsState = this._getState(this._config.sensor_cleanings_count);
     const visitsState = this._getState(this._config.sensor_total_visits);
     const durationState = this._getState(this._config.sensor_visit_duration);
-    const litterChangedState = this._getState(this._config.sensor_litter_changed);
-    const litterDateText = formatDateState(litterChangedState?.state, lang);
+    const litterDateText = formatDateState(this._litterChangedAt, lang);
 
     // Image source (custom URL > model embedded image > default image)
     let modelImgData = DEFAULT_IMAGE;
@@ -1425,7 +1472,7 @@ class LitterCard extends HTMLElement {
           ` : ''}
 
           <!-- Last litter change date -->
-          ${this._config.sensor_litter_changed ? `
+          ${this._config.btn_bag_changed ? `
             <div class="litter-date-overlay">
               <ha-icon icon="mdi:calendar-check" style="--mdc-icon-size: 14px;"></ha-icon>
               <span>${t("litter_changed_on", lang)} ${litterDateText}</span>
@@ -1646,7 +1693,10 @@ class LitterCard extends HTMLElement {
     buttons.forEach(key => {
       const el = root.getElementById(key);
       if (el) {
-        el.addEventListener("click", () => this._pressButton(this._config[key]));
+        el.addEventListener("click", () => {
+          this._pressButton(this._config[key]);
+          if (key === "btn_bag_changed") this._markLitterChanged();
+        });
       }
     });
 
@@ -1785,9 +1835,7 @@ class LitterCardEditor extends HTMLElement {
       { key: "sensor_problem", label: `${t("status_problem", lang)} (Binary Sensor)`, domains: ["binary_sensor", "sensor"] },
       { key: "sensor_cleanings_count", label: `${t("stat_cleanings", lang)} (Sensor)`, domains: ["sensor", "input_number", "counter"] },
       { key: "sensor_total_visits", label: `${t("stat_visits", lang)} (Sensor)`, domains: ["sensor", "input_number", "counter"] },
-      { key: "sensor_visit_duration", label: `${t("stat_duration", lang)} (Sensor)`, domains: ["sensor", "input_number"] },
-      { key: "sensor_litter_changed", label: `${t("litter_changed_on", lang)} (Date / Sensor)`, domains: ["input_datetime", "sensor", "datetime"] },
-    ];
+      { key: "sensor_visit_duration", label: `${t("stat_duration", lang)} (Sensor)`, domains: ["sensor", "input_number"] },    ];
 
     const allSettingFields = [
       { key: "cfg_auto_clean", label: `${t("cfg_auto_clean", lang)} (Switch)`, domains: ["switch", "input_boolean"] },
