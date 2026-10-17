@@ -779,7 +779,7 @@ export const EDITOR_STYLES = `
 `;
 
 
-const CARD_VERSION = "0.41";
+const CARD_VERSION = "0.42";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -1112,14 +1112,19 @@ function tDomain(domain, hass) {
 
 const LITTER_DATE_STORE_KEY = "litter_card_litter_changed";
 
-function formatDateState(stateStr, lang) {
-  if (!stateStr || stateStr === "unknown" || stateStr === "unavailable") return "--";
+function parseDateState(stateStr) {
+  if (!stateStr || stateStr === "unknown" || stateStr === "unavailable") return null;
   const s = String(stateStr).trim();
   const dateOnly = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   const d = dateOnly
     ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
     : new Date(s.replace(" ", "T"));
-  if (isNaN(d)) return "--";
+  return isNaN(d) ? null : d;
+}
+
+function formatDateState(stateStr, lang) {
+  const d = parseDateState(stateStr);
+  if (!d) return "--";
   return d.toLocaleDateString(lang, { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
@@ -1185,9 +1190,42 @@ class LitterCard extends HTMLElement {
         value = localStorage.getItem(`${LITTER_DATE_STORE_KEY}:${id}`);
       } catch (err) {}
     }
+    if (!value) {
+      // A button entity's state is the timestamp of its last press
+      const entityState = this._getState(id)?.state;
+      if (parseDateState(entityState)) value = entityState;
+    }
+    if (!value) {
+      value = await this._dateFromHistory(id);
+    }
     if (value && this._config.btn_bag_changed === id) {
       this._litterChangedAt = value;
       this._render();
+    }
+  }
+
+  async _dateFromHistory(id) {
+    try {
+      const end = new Date();
+      const start = new Date(end.getTime() - 30 * 24 * 3600 * 1000);
+      const res = await this._hass.callWS({
+        type: "history/history_during_period",
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        entity_ids: [id],
+        include_start_time_state: true,
+        significant_changes_only: false,
+        minimal_response: true,
+        no_attributes: true,
+      });
+      let best = null;
+      for (const item of res?.[id] || []) {
+        const d = parseDateState(item.s);
+        if (d && (!best || d > best)) best = d;
+      }
+      return best ? best.toISOString() : null;
+    } catch (err) {
+      return null;
     }
   }
 
