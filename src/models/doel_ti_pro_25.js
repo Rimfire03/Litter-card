@@ -23,6 +23,9 @@ export default {
     bin_pos_x: 85,
     bin_pos_y: 14,
     bin_scale: 1,
+
+    litter_date_pos_x: 37,
+    litter_date_pos_y: 85,
   },
 
   // Liste des contrôles / options matérielles supportées par ce modèle
@@ -43,6 +46,7 @@ export default {
       "sensor_cleanings_count",
       "sensor_total_visits",
       "sensor_visit_duration",
+      "sensor_litter_changed",
     ],
     settings: [
       "cfg_auto_clean",

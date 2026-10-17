@@ -12,6 +12,8 @@ export function getCardStyles({
   binX,
   binY,
   binScale,
+  litterDateX,
+  litterDateY,
   configOpen,
 }) {
   return `
@@ -186,6 +188,27 @@ export function getCardStyles({
         @keyframes shake {
           0% { transform: translate(-50%, -50%) scale(${binScale}) translateY(0); }
           100% { transform: translate(-50%, -50%) scale(${binScale}) translateY(-3px); }
+        }
+
+        /* Last litter change date overlay */
+        .litter-date-overlay {
+          position: absolute;
+          top: ${litterDateY}%;
+          left: ${litterDateX}%;
+          transform: translate(-50%, -50%);
+          background: rgba(30, 41, 59, 0.7);
+          backdrop-filter: blur(6px);
+          color: white;
+          padding: 4px 10px;
+          border-radius: 16px;
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 0.72rem;
+          font-weight: 600;
+          white-space: nowrap;
+          border: 1px solid rgba(255,255,255,0.15);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
 
         /* Quick Stats Grid */

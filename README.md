@@ -145,6 +145,7 @@ cfg_unit: select.cat_litter_box_unit
 | `sensor_cleanings_count` | Sensor | Cleanings counter tile |
 | `sensor_total_visits` | Sensor | Total visits counter tile |
 | `sensor_visit_duration` | Sensor | Last visit duration tile |
+| `sensor_litter_changed` | `input_datetime` / date or timestamp sensor | Date of the last litter change, shown on the image |
 | `cfg_auto_clean` | Switch entity | Auto-clean switch toggle |
 | `cfg_deep_clean` | Switch entity | Deep clean switch toggle |
 | `cfg_odor_removal` | Switch entity | Odor removal post-clean switch toggle |
@@ -165,6 +166,8 @@ cfg_unit: select.cat_litter_box_unit
 | `bin_pos_x` | Number (%) | Custom X position of the waste bin alert (default: 85) |
 | `bin_pos_y` | Number (%) | Custom Y position of the waste bin alert (default: 14) |
 | `bin_scale` | Number | Scale multiplier for waste bin alert (default: 1) |
+| `litter_date_pos_x` | Number (%) | Custom X position of the litter change date (default: 37) |
+| `litter_date_pos_y` | Number (%) | Custom Y position of the litter change date (default: 85) |
 
 ---
 

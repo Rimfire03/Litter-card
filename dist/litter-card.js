@@ -23,7 +23,9 @@ export const LITTER_MODELS = {
       "weight_size": 1.15,
       "bin_pos_x": 85,
       "bin_pos_y": 14,
-      "bin_scale": 1
+      "bin_scale": 1,
+      "litter_date_pos_x": 37,
+      "litter_date_pos_y": 85
     },
     "features": {
       "buttons": [
@@ -41,7 +43,8 @@ export const LITTER_MODELS = {
         "sensor_problem",
         "sensor_cleanings_count",
         "sensor_total_visits",
-        "sensor_visit_duration"
+        "sensor_visit_duration",
+        "sensor_litter_changed"
       ],
       "settings": [
         "cfg_auto_clean",
@@ -79,7 +82,9 @@ export const LITTER_MODELS = {
       "weight_size": 1.15,
       "bin_pos_x": 85,
       "bin_pos_y": 14,
-      "bin_scale": 1
+      "bin_scale": 1,
+      "litter_date_pos_x": 37,
+      "litter_date_pos_y": 85
     },
     "features": {
       "buttons": [
@@ -97,7 +102,8 @@ export const LITTER_MODELS = {
         "sensor_problem",
         "sensor_cleanings_count",
         "sensor_total_visits",
-        "sensor_visit_duration"
+        "sensor_visit_duration",
+        "sensor_litter_changed"
       ],
       "settings": [
         "cfg_auto_clean",
@@ -138,6 +144,8 @@ export function getCardStyles({
   binX,
   binY,
   binScale,
+  litterDateX,
+  litterDateY,
   configOpen,
 }) {
   return `
@@ -312,6 +320,27 @@ export function getCardStyles({
         @keyframes shake {
           0% { transform: translate(-50%, -50%) scale(${binScale}) translateY(0); }
           100% { transform: translate(-50%, -50%) scale(${binScale}) translateY(-3px); }
+        }
+
+        /* Last litter change date overlay */
+        .litter-date-overlay {
+          position: absolute;
+          top: ${litterDateY}%;
+          left: ${litterDateX}%;
+          transform: translate(-50%, -50%);
+          background: rgba(30, 41, 59, 0.7);
+          backdrop-filter: blur(6px);
+          color: white;
+          padding: 4px 10px;
+          border-radius: 16px;
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 0.72rem;
+          font-weight: 600;
+          white-space: nowrap;
+          border: 1px solid rgba(255,255,255,0.15);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
 
         /* Quick Stats Grid */
@@ -752,7 +781,7 @@ export const EDITOR_STYLES = `
 `;
 
 
-const CARD_VERSION = "0.39";
+const CARD_VERSION = "0.40";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -827,6 +856,9 @@ const TRANSLATIONS = {
     opt_bin_pos_x: "Position X alerte sac (%)",
     opt_bin_pos_y: "Position Y alerte sac (%)",
     opt_bin_scale: "Échelle alerte sac",
+    litter_changed_on: "Litière changée le",
+    opt_litter_date_pos_x: "Position X date litière (%)",
+    opt_litter_date_pos_y: "Position Y date litière (%)",
     shape_circle: "Cercle",
     shape_ellipse: "Ellipse",
     shape_rounded: "Rectangle arrondi",
@@ -899,6 +931,9 @@ const TRANSLATIONS = {
     opt_bin_pos_x: "Bin Alert Position X (%)",
     opt_bin_pos_y: "Bin Alert Position Y (%)",
     opt_bin_scale: "Bin Alert Scale",
+    litter_changed_on: "Litter changed on",
+    opt_litter_date_pos_x: "Litter Date Position X (%)",
+    opt_litter_date_pos_y: "Litter Date Position Y (%)",
     shape_circle: "Circle",
     shape_ellipse: "Ellipse",
     shape_rounded: "Rounded rectangle",
@@ -971,6 +1006,9 @@ const TRANSLATIONS = {
     opt_bin_pos_x: "Beutel-Warnung Position X (%)",
     opt_bin_pos_y: "Beutel-Warnung Position Y (%)",
     opt_bin_scale: "Beutel-Warnung Skalierung",
+    litter_changed_on: "Streu gewechselt am",
+    opt_litter_date_pos_x: "Streu-Datum Position X (%)",
+    opt_litter_date_pos_y: "Streu-Datum Position Y (%)",
     shape_circle: "Kreis",
     shape_ellipse: "Ellipse",
     shape_rounded: "Abgerundetes Rechteck",
@@ -1043,6 +1081,9 @@ const TRANSLATIONS = {
     opt_bin_pos_x: "Posición X alerta bolsa (%)",
     opt_bin_pos_y: "Posición Y alerta bolsa (%)",
     opt_bin_scale: "Escala alerta bolsa",
+    litter_changed_on: "Arena cambiada el",
+    opt_litter_date_pos_x: "Posición X fecha arena (%)",
+    opt_litter_date_pos_y: "Posición Y fecha arena (%)",
     shape_circle: "Círculo",
     shape_ellipse: "Elipse",
     shape_rounded: "Rectángulo redondeado",
@@ -1069,6 +1110,17 @@ function tDomain(domain, hass) {
   const localized = hass?.localize?.(`component.${domain}.entity_component._.name`);
   if (localized) return localized;
   return domain.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatDateState(stateStr, lang) {
+  if (!stateStr || stateStr === "unknown" || stateStr === "unavailable") return "--";
+  const s = String(stateStr).trim();
+  const dateOnly = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const d = dateOnly
+    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+    : new Date(s.replace(" ", "T"));
+  if (isNaN(d)) return "--";
+  return d.toLocaleDateString(lang, { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 const STATUS_ALIASES = {
@@ -1121,6 +1173,7 @@ class LitterCard extends HTMLElement {
       this._config.btn_bag_replace,
       this._config.btn_bag_changed,
       this._config.sensor_visit_duration,
+      this._config.sensor_litter_changed,
       this._config.sensor_cleanings_count,
       this._config.sensor_total_visits,
       this._config.sensor_occupancy,
@@ -1267,6 +1320,8 @@ class LitterCard extends HTMLElement {
     const cleaningsState = this._getState(this._config.sensor_cleanings_count);
     const visitsState = this._getState(this._config.sensor_total_visits);
     const durationState = this._getState(this._config.sensor_visit_duration);
+    const litterChangedState = this._getState(this._config.sensor_litter_changed);
+    const litterDateText = formatDateState(litterChangedState?.state, lang);
 
     // Image source (custom URL > model embedded image > default image)
     let modelImgData = DEFAULT_IMAGE;
@@ -1292,6 +1347,9 @@ class LitterCard extends HTMLElement {
     const binX = this._config.bin_pos_x ?? overlayDefaults.bin_pos_x ?? 85;
     const binY = this._config.bin_pos_y ?? overlayDefaults.bin_pos_y ?? 14;
     const binScale = this._config.bin_scale ?? overlayDefaults.bin_scale ?? 1;
+
+    const litterDateX = this._config.litter_date_pos_x ?? overlayDefaults.litter_date_pos_x ?? 37;
+    const litterDateY = this._config.litter_date_pos_y ?? overlayDefaults.litter_date_pos_y ?? 85;
 
     // Buttons presence
     const hasBtnClean = Boolean(this._config.btn_clean);
@@ -1321,6 +1379,7 @@ class LitterCard extends HTMLElement {
         entranceX, entranceY, entranceW, entranceH, entranceBorderRadius,
         weightX, weightY, weightFontSize,
         binX, binY, binScale,
+        litterDateX, litterDateY,
         configOpen: this._configOpen,
       })}</style>
 
@@ -1362,6 +1421,14 @@ class LitterCard extends HTMLElement {
             <div class="weight-overlay" title="${t("weight_tooltip", lang)}">
               <div class="weight-value">${weightVal}</div>
               <div class="weight-unit">${weightUnit}</div>
+            </div>
+          ` : ''}
+
+          <!-- Last litter change date -->
+          ${this._config.sensor_litter_changed ? `
+            <div class="litter-date-overlay">
+              <ha-icon icon="mdi:calendar-check" style="--mdc-icon-size: 14px;"></ha-icon>
+              <span>${t("litter_changed_on", lang)} ${litterDateText}</span>
             </div>
           ` : ''}
         </div>
@@ -1668,6 +1735,8 @@ class LitterCardEditor extends HTMLElement {
           "bin_pos_x",
           "bin_pos_y",
           "bin_scale",
+          "litter_date_pos_x",
+          "litter_date_pos_y",
         ].includes(key)
       ) {
         newConfig[key] = isNaN(value) ? value : parseFloat(value);
@@ -1717,6 +1786,7 @@ class LitterCardEditor extends HTMLElement {
       { key: "sensor_cleanings_count", label: `${t("stat_cleanings", lang)} (Sensor)`, domains: ["sensor", "input_number", "counter"] },
       { key: "sensor_total_visits", label: `${t("stat_visits", lang)} (Sensor)`, domains: ["sensor", "input_number", "counter"] },
       { key: "sensor_visit_duration", label: `${t("stat_duration", lang)} (Sensor)`, domains: ["sensor", "input_number"] },
+      { key: "sensor_litter_changed", label: `${t("litter_changed_on", lang)} (Date / Sensor)`, domains: ["input_datetime", "sensor", "datetime"] },
     ];
 
     const allSettingFields = [
@@ -1787,6 +1857,8 @@ class LitterCardEditor extends HTMLElement {
       { key: "bin_pos_x", label: t("opt_bin_pos_x", lang), type: "number", min: 0, max: 100, step: 0.5, default: selectedModel?.overlay?.bin_pos_x ?? 85 },
       { key: "bin_pos_y", label: t("opt_bin_pos_y", lang), type: "number", min: 0, max: 100, step: 0.5, default: selectedModel?.overlay?.bin_pos_y ?? 14 },
       { key: "bin_scale", label: t("opt_bin_scale", lang), type: "number", min: 0.5, max: 2, step: 0.05, default: selectedModel?.overlay?.bin_scale ?? 1 },
+      { key: "litter_date_pos_x", label: t("opt_litter_date_pos_x", lang), type: "number", min: 0, max: 100, step: 0.5, default: selectedModel?.overlay?.litter_date_pos_x ?? 37 },
+      { key: "litter_date_pos_y", label: t("opt_litter_date_pos_y", lang), type: "number", min: 0, max: 100, step: 0.5, default: selectedModel?.overlay?.litter_date_pos_y ?? 85 },
     ];
 
     const allEntities = this._hass ? Object.keys(this._hass.states).sort() : [];
