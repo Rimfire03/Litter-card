@@ -326,19 +326,19 @@ export function getCardStyles({
           top: ${litterDateY}%;
           left: ${litterDateX}%;
           transform: translate(-50%, -50%);
-          background: rgba(30, 41, 59, 0.7);
-          backdrop-filter: blur(6px);
-          color: white;
-          padding: 4px 10px;
-          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.9);
+          color: #0c4a6e;
+          padding: 3px 10px;
+          border-radius: 20px;
           display: flex;
           align-items: center;
           gap: 5px;
           font-size: 0.72rem;
-          font-weight: 600;
+          font-weight: 500;
           white-space: nowrap;
-          border: 1px solid rgba(255,255,255,0.15);
-          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .litter-date-overlay ha-icon {
+          color: var(--primary-color, #0284c7);
         }
 
         /* Quick Stats Grid */
@@ -779,7 +779,7 @@ export const EDITOR_STYLES = `
 `;
 
 
-const CARD_VERSION = "0.42";
+const CARD_VERSION = "0.43";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -854,7 +854,7 @@ const TRANSLATIONS = {
     opt_bin_pos_x: "Position X alerte sac (%)",
     opt_bin_pos_y: "Position Y alerte sac (%)",
     opt_bin_scale: "Échelle alerte sac",
-    litter_changed_on: "Litière changée le",
+    litter_changed_on: "Changée le",
     opt_litter_date_pos_x: "Position X date litière (%)",
     opt_litter_date_pos_y: "Position Y date litière (%)",
     shape_circle: "Cercle",
@@ -929,7 +929,7 @@ const TRANSLATIONS = {
     opt_bin_pos_x: "Bin Alert Position X (%)",
     opt_bin_pos_y: "Bin Alert Position Y (%)",
     opt_bin_scale: "Bin Alert Scale",
-    litter_changed_on: "Litter changed on",
+    litter_changed_on: "Changed on",
     opt_litter_date_pos_x: "Litter Date Position X (%)",
     opt_litter_date_pos_y: "Litter Date Position Y (%)",
     shape_circle: "Circle",
@@ -1004,7 +1004,7 @@ const TRANSLATIONS = {
     opt_bin_pos_x: "Beutel-Warnung Position X (%)",
     opt_bin_pos_y: "Beutel-Warnung Position Y (%)",
     opt_bin_scale: "Beutel-Warnung Skalierung",
-    litter_changed_on: "Streu gewechselt am",
+    litter_changed_on: "Gewechselt am",
     opt_litter_date_pos_x: "Streu-Datum Position X (%)",
     opt_litter_date_pos_y: "Streu-Datum Position Y (%)",
     shape_circle: "Kreis",
@@ -1079,7 +1079,7 @@ const TRANSLATIONS = {
     opt_bin_pos_x: "Posición X alerta bolsa (%)",
     opt_bin_pos_y: "Posición Y alerta bolsa (%)",
     opt_bin_scale: "Escala alerta bolsa",
-    litter_changed_on: "Arena cambiada el",
+    litter_changed_on: "Cambiada el",
     opt_litter_date_pos_x: "Posición X fecha arena (%)",
     opt_litter_date_pos_y: "Posición Y fecha arena (%)",
     shape_circle: "Círculo",
