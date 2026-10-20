@@ -66,13 +66,13 @@ If you find this card helpful, consider buying me a coffee to support the develo
 ### Method 1: Via HACS (Recommended)
 
 1. Open **Home Assistant** and navigate to **HACS** > **Frontend**.
-2. Click the **3 vertical dots menu** in the top right corner and choose **Custom repositories**.
-3. Fill in the repository information:
-   - **Repository**: `https://github.com/Rimfire03/Litter-card`
-   - **Category**: `Lovelace` (or `Dashboard`)
-4. Click **Add**.
-5. Find **Litter Card** in your HACS list and click **Download**.
-6. Refresh your browser when prompted.
+2. Search for **Litter Card** and click **Download**.
+3. Refresh your browser when prompted.
+
+> **Not listed yet?** The submission to the default HACS catalog is pending. In the meantime, add it as a custom repository:
+> 1. In **HACS**, click the **3 vertical dots menu** in the top right corner and choose **Custom repositories**.
+> 2. Fill in **Repository**: `https://github.com/Rimfire03/Litter-card` and **Category**: `Dashboard` (or `Lovelace`).
+> 3. Click **Add**, then search for **Litter Card** and click **Download**.
 
 ---
 
@@ -205,13 +205,13 @@ cfg_unit: select.cat_litter_box_unit
 ### Méthode 1 : Via HACS (Recommandé)
 
 1. Ouvrez **Home Assistant** et allez dans **HACS** > **Interface utilisateur (Frontend)**.
-2. Cliquez sur les **3 petits points** en haut à droite, puis sélectionnez **Dépôts personnalisés** (*Custom repositories*).
-3. Entrez l'URL de votre dépôt :
-   - **Dépôt** : `https://github.com/Rimfire03/Litter-card`
-   - **Catégorie** : `Lovelace` (ou `Dashboard`)
-4. Cliquez sur **Ajouter**.
-5. Cherchez ensuite **Litter Card** dans la liste HACS et cliquez sur **Télécharger**.
-6. Rechargez la page de votre navigateur.
+2. Recherchez **Litter Card** et cliquez sur **Télécharger**.
+3. Rechargez la page de votre navigateur.
+
+> **Pas encore dans la liste ?** La soumission au catalogue HACS par défaut est en attente. En attendant, ajoutez-la comme dépôt personnalisé :
+> 1. Dans **HACS**, cliquez sur les **3 petits points** en haut à droite, puis sur **Dépôts personnalisés** (*Custom repositories*).
+> 2. Renseignez **Dépôt** : `https://github.com/Rimfire03/Litter-card` et **Catégorie** : `Dashboard` (ou `Lovelace`).
+> 3. Cliquez sur **Ajouter**, puis recherchez **Litter Card** et cliquez sur **Télécharger**.
 
 ---
 
