@@ -2,7 +2,7 @@ import { DEFAULT_IMAGE, MODEL_IMAGES } from './image-data.js';
 import { LITTER_MODELS, DEFAULT_MODEL_ID, getModelConfig } from './models/index.js';
 import { getCardStyles, EDITOR_STYLES } from './styles.js';
 
-const CARD_VERSION = "0.43";
+const CARD_VERSION = "0.44";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -334,6 +334,16 @@ function tDomain(domain, hass) {
 }
 
 const LITTER_DATE_STORE_KEY = "litter_card_litter_changed";
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  }[c]));
+}
 
 function parseDateState(stateStr) {
   if (!stateStr || stateStr === "unknown" || stateStr === "unavailable") return null;
@@ -696,17 +706,17 @@ class LitterCard extends HTMLElement {
         <div class="header">
           <div class="title-group">
             <ha-icon icon="mdi:cat" style="color: var(--primary-color, #0284c7);"></ha-icon>
-            <div class="title">${cardTitle}</div>
+            <div class="title">${escapeHtml(cardTitle)}</div>
           </div>
           <div class="status-badge ${isOffline ? 'offline' : (isStatusFull ? 'full' : '')}">
             <div class="status-dot"></div>
-            <span>${statusText}</span>
+            <span>${escapeHtml(statusText)}</span>
           </div>
         </div>
 
         <!-- Main Image Visual with Dynamic Overlays -->
         <div class="image-container">
-          <img class="litter-img" src="${imgSrc}" alt="${cardTitle}" />
+          <img class="litter-img" src="${escapeHtml(imgSrc)}" alt="${escapeHtml(cardTitle)}" />
 
           <!-- Entrance Light / Occupancy Indicator -->
           <div class="entrance-glow ${isOffline ? 'offline' : ''}">
@@ -728,7 +738,7 @@ class LitterCard extends HTMLElement {
           ${this._config.sensor_cat_weight ? `
             <div class="weight-overlay" title="${t("weight_tooltip", lang)}">
               <div class="weight-value">${weightVal}</div>
-              <div class="weight-unit">${weightUnit}</div>
+              <div class="weight-unit">${escapeHtml(weightUnit)}</div>
             </div>
           ` : ''}
 
@@ -747,7 +757,7 @@ class LitterCard extends HTMLElement {
             ${cleaningsState ? `
               <div class="stat-item">
                 <ha-icon icon="mdi:broom" class="stat-icon" style="--mdc-icon-size: 18px;"></ha-icon>
-                <div class="stat-val">${cleaningsState.state}</div>
+                <div class="stat-val">${escapeHtml(cleaningsState.state)}</div>
                 <div class="stat-lbl">${t("stat_cleanings", lang)}</div>
               </div>
             ` : ''}
@@ -755,7 +765,7 @@ class LitterCard extends HTMLElement {
             ${visitsState ? `
               <div class="stat-item">
                 <ha-icon icon="mdi:counter" class="stat-icon" style="--mdc-icon-size: 18px;"></ha-icon>
-                <div class="stat-val">${visitsState.state}</div>
+                <div class="stat-val">${escapeHtml(visitsState.state)}</div>
                 <div class="stat-lbl">${t("stat_visits", lang)}</div>
               </div>
             ` : ''}
@@ -912,7 +922,7 @@ class LitterCard extends HTMLElement {
           <span class="config-desc">${val} ${unit}</span>
         </div>
         <div class="slider-group">
-          <input type="range" id="${configKey}" min="${minVal}" max="${maxVal}" step="${stepVal}" value="${val}">
+          <input type="range" id="${configKey}" min="${escapeHtml(minVal)}" max="${escapeHtml(maxVal)}" step="${escapeHtml(stepVal)}" value="${escapeHtml(val)}">
           <span class="slider-val">${val}</span>
         </div>
       </div>
@@ -931,7 +941,7 @@ class LitterCard extends HTMLElement {
           <span class="config-label">${title}</span>
         </div>
         <select class="control-select" id="${configKey}">
-          ${options.map(opt => `<option value="${opt}" ${opt === currentVal ? 'selected' : ''}>${opt}</option>`).join('')}
+          ${options.map(opt => `<option value="${escapeHtml(opt)}" ${opt === currentVal ? 'selected' : ''}>${escapeHtml(opt)}</option>`).join('')}
         </select>
       </div>
     `;
@@ -1184,7 +1194,7 @@ class LitterCardEditor extends HTMLElement {
             return `
               <div class="row">
                 <span class="label">${field.label}</span>
-                <input type="text" class="text-input" data-key="${field.key}" value="${currentVal}">
+                <input type="text" class="text-input" data-key="${field.key}" value="${escapeHtml(currentVal)}">
               </div>
             `;
           }
@@ -1193,7 +1203,7 @@ class LitterCardEditor extends HTMLElement {
             return `
               <div class="row">
                 <span class="label">${field.label}</span>
-                <input type="number" class="text-input" min="${field.min}" max="${field.max}" step="${field.step}" data-key="${field.key}" value="${currentVal}">
+                <input type="number" class="text-input" min="${field.min}" max="${field.max}" step="${field.step}" data-key="${field.key}" value="${escapeHtml(currentVal)}">
               </div>
             `;
           }
@@ -1235,8 +1245,8 @@ class LitterCardEditor extends HTMLElement {
               <div class="picker-box" data-field="${field.key}">
                 <div class="picker-trigger" data-trigger="${field.key}">
                   <span class="selected-text">
-                    ${currentVal ? `${currentFriendly || currentVal}` : `<span style="opacity: 0.6;">${t("not_configured", lang)}</span>`}
-                    ${currentVal && currentFriendly ? `<span class="selected-entity-id">(${currentVal})</span>` : ''}
+                    ${currentVal ? escapeHtml(currentFriendly || currentVal) : `<span style="opacity: 0.6;">${t("not_configured", lang)}</span>`}
+                    ${currentVal && currentFriendly ? `<span class="selected-entity-id">(${escapeHtml(currentVal)})</span>` : ''}
                   </span>
                   <ha-icon icon="${isDropdownOpen ? 'mdi:chevron-up' : 'mdi:chevron-down'}" style="--mdc-icon-size: 18px; color: var(--secondary-text-color, #64748b);"></ha-icon>
                 </div>
@@ -1244,7 +1254,7 @@ class LitterCardEditor extends HTMLElement {
                 ${isDropdownOpen ? `
                   <div class="picker-dropdown">
                     <div class="picker-search">
-                      <input type="text" class="search-field" placeholder="🔍 ${t("search_placeholder", lang)}" value="${this._filterQuery}" autofocus>
+                      <input type="text" class="search-field" placeholder="🔍 ${t("search_placeholder", lang)}" value="${escapeHtml(this._filterQuery)}" autofocus>
                     </div>
                     <div class="picker-options">
                       <div class="picker-item ${!currentVal ? 'active' : ''}" data-val="">
@@ -1258,12 +1268,12 @@ class LitterCardEditor extends HTMLElement {
                         const domainLabel = tDomain(domain, this._hass);
                         const isActive = e === currentVal;
                         return `
-                          <div class="picker-item ${isActive ? 'active' : ''}" data-val="${e}">
+                          <div class="picker-item ${isActive ? 'active' : ''}" data-val="${escapeHtml(e)}">
                             <div class="item-main">
-                              <span class="item-name">${friendly}</span>
-                              <span class="item-id">${e}</span>
+                              <span class="item-name">${escapeHtml(friendly)}</span>
+                              <span class="item-id">${escapeHtml(e)}</span>
                             </div>
-                            <span class="item-domain">${domainLabel}</span>
+                            <span class="item-domain">${escapeHtml(domainLabel)}</span>
                           </div>
                         `;
                       }).join('')}
