@@ -1,6 +1,6 @@
 # 🐱 Litter-Card
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/default)
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/default)
 [![GitHub release](https://img.shields.io/github/v/release/Rimfire03/Litter-card?include_prereleases)](https://github.com/Rimfire03/Litter-card/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Donate-orange.svg?logo=buy-me-a-coffee&logoColor=white)](https://buymeacoffee.com/slide598b)
@@ -68,11 +68,6 @@ If you find this card helpful, consider buying me a coffee to support the develo
 1. Open **Home Assistant** and navigate to **HACS** > **Frontend**.
 2. Search for **Litter Card** and click **Download**.
 3. Refresh your browser when prompted.
-
-> **Not listed yet?** The submission to the default HACS catalog is pending. In the meantime, add it as a custom repository:
-> 1. In **HACS**, click the **3 vertical dots menu** in the top right corner and choose **Custom repositories**.
-> 2. Fill in **Repository**: `https://github.com/Rimfire03/Litter-card` and **Category**: `Dashboard` (or `Lovelace`).
-> 3. Click **Add**, then search for **Litter Card** and click **Download**.
 
 ---
 
@@ -207,11 +202,6 @@ cfg_unit: select.cat_litter_box_unit
 1. Ouvrez **Home Assistant** et allez dans **HACS** > **Interface utilisateur (Frontend)**.
 2. Recherchez **Litter Card** et cliquez sur **Télécharger**.
 3. Rechargez la page de votre navigateur.
-
-> **Pas encore dans la liste ?** La soumission au catalogue HACS par défaut est en attente. En attendant, ajoutez-la comme dépôt personnalisé :
-> 1. Dans **HACS**, cliquez sur les **3 petits points** en haut à droite, puis sur **Dépôts personnalisés** (*Custom repositories*).
-> 2. Renseignez **Dépôt** : `https://github.com/Rimfire03/Litter-card` et **Catégorie** : `Dashboard` (ou `Lovelace`).
-> 3. Cliquez sur **Ajouter**, puis recherchez **Litter Card** et cliquez sur **Télécharger**.
 
 ---
 
