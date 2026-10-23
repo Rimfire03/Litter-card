@@ -245,6 +245,10 @@ export function getCardStyles({
           font-weight: 700;
           color: var(--primary-text-color, #1e293b);
         }
+        .cat-ref {
+          font-size: 0.68rem;
+          color: var(--secondary-text-color, #64748b);
+        }
         .cat-spark {
           width: 100%;
           height: 28px;

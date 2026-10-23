@@ -45,7 +45,7 @@ If you find this card helpful, consider buying me a coffee to support the develo
   - **Waste Bin Status Alert**: Animated badge in the top right corner when the bag is full.
 - **Quick Statistics Overview**: Cleanings count, total visit counter, and duration of the last visit.
 - **Manual Control Action Buttons**: Clean, Level litter, Replace bag, Bag changed confirmation, and Restart device.
-- **Per-cat weight tracking**: set the number of cats and their names; the card groups the weigh-ins of the weight sensor into one group per cat (names are given from the lightest to the heaviest) and shows each cat's recent weight with a 30-day trend. The history is rebuilt from the sensor's recorded history and kept by the card. Cats with weights closer than 0.4 can be mixed up.
+- **Per-cat weight tracking**: set the number of cats and their names; the card groups the weigh-ins of the weight sensor into one group per cat (names are given from the lightest to the heaviest), or assigns each weigh-in to the cat with the nearest reference weight when you set one for every cat and shows each cat's recent weight with a 30-day trend. The history is rebuilt from the sensor's recorded history and kept by the card. Cats with weights closer than 0.4 can be mixed up.
 - **Last litter change date**: shown on the image and recorded by the card each time the "Bag changed" button is pressed (stored per Home Assistant user, with browser storage as fallback).
 - **Collapsible Settings & Configuration Accordion**:
   - Auto clean toggle (Switch)
@@ -165,7 +165,8 @@ cfg_unit: select.cat_litter_box_unit
 | `litter_date_pos_x` | Number (%) | Custom X position of the litter change date (default: 37) |
 | `litter_date_pos_y` | Number (%) | Custom Y position of the litter change date (default: 85) |
 | `cat_count` | Number (1-6) | Number of cats in the house. Enables per-cat weight tracking (needs `sensor_cat_weight`) |
-| `cat_name_1` ... `cat_name_6` | String | Name of each cat, from the lightest to the heaviest |
+| `cat_name_1` ... `cat_name_6` | String | Name of each cat (from the lightest to the heaviest when no reference weights are set) |
+| `cat_weight_1` ... `cat_weight_6` | Number | Reference weight of each cat, in the unit of the weight sensor. When set for every cat, each weigh-in goes to the nearest reference, whatever the order of the names |
 
 ---
 
@@ -182,7 +183,7 @@ cfg_unit: select.cat_litter_box_unit
   - **Alerte Sac Plein** : badge dynamique et animé en haut à droite de l'image.
 - **Statistiques en un coup d'œil** : Nombre de nettoyages, nombre total de visites et durée du passage.
 - **Boutons de Contrôle Manuel** : Nettoyer, Niveler, Remplacement du sac, Changer la litière, Redémarrer.
-- **Suivi du poids par chat** : indiquez le nombre de chats et leurs noms ; la carte regroupe les pesées du capteur de poids en un groupe par chat (noms donnés du plus léger au plus lourd) et affiche le poids récent de chacun avec sa tendance sur 30 jours. L'historique est reconstruit à partir de l'historique enregistré du capteur et conservé par la carte. Des chats dont les poids sont à moins de 0,4 d'écart peuvent être confondus.
+- **Suivi du poids par chat** : indiquez le nombre de chats et leurs noms ; la carte regroupe les pesées du capteur de poids en un groupe par chat (noms donnés du plus léger au plus lourd), ou attribue chaque pesée au chat dont le poids de référence est le plus proche si vous en indiquez un pour chaque chat et affiche le poids récent de chacun avec sa tendance sur 30 jours. L'historique est reconstruit à partir de l'historique enregistré du capteur et conservé par la carte. Des chats dont les poids sont à moins de 0,4 d'écart peuvent être confondus.
 - **Date du dernier changement de litière** : affichée sur l'image et enregistrée par la carte à chaque appui sur « Changer la litière » (stockée par utilisateur Home Assistant, avec le navigateur en secours).
 - **Menu Déroulant Paramètres & Configuration** :
   - Nettoyage automatique (Interrupteur)

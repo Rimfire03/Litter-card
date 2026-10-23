@@ -2,7 +2,7 @@ import { DEFAULT_IMAGE, MODEL_IMAGES } from './image-data.js';
 import { LITTER_MODELS, DEFAULT_MODEL_ID, getModelConfig } from './models/index.js';
 import { getCardStyles, EDITOR_STYLES } from './styles.js';
 
-const CARD_VERSION = "0.48";
+const CARD_VERSION = "0.49";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -79,7 +79,9 @@ const TRANSLATIONS = {
     opt_bin_scale: "Échelle alerte sac",
     litter_changed_on: "Changée le",
     sec_cats: "Chats",
-    cats_order_hint: "du plus léger au plus lourd",
+    cats_order_hint: "sans poids de référence : du plus léger au plus lourd",
+    opt_cat_weight: "Poids de référence du chat",
+    cat_reference_short: "réf.",
     opt_cat_count: "Nombre de chats",
     opt_cat_name: "Nom du chat",
     cat_default_name: "Chat",
@@ -161,7 +163,9 @@ const TRANSLATIONS = {
     opt_bin_scale: "Bin Alert Scale",
     litter_changed_on: "Changed on",
     sec_cats: "Cats",
-    cats_order_hint: "lightest to heaviest",
+    cats_order_hint: "without reference weights: lightest to heaviest",
+    opt_cat_weight: "Cat reference weight",
+    cat_reference_short: "ref.",
     opt_cat_count: "Number of cats",
     opt_cat_name: "Cat name",
     cat_default_name: "Cat",
@@ -243,7 +247,9 @@ const TRANSLATIONS = {
     opt_bin_scale: "Beutel-Warnung Skalierung",
     litter_changed_on: "Gewechselt am",
     sec_cats: "Katzen",
-    cats_order_hint: "von leicht nach schwer",
+    cats_order_hint: "ohne Referenzgewicht: von leicht nach schwer",
+    opt_cat_weight: "Referenzgewicht der Katze",
+    cat_reference_short: "Ref.",
     opt_cat_count: "Anzahl der Katzen",
     opt_cat_name: "Name der Katze",
     cat_default_name: "Katze",
@@ -325,7 +331,9 @@ const TRANSLATIONS = {
     opt_bin_scale: "Escala alerta bolsa",
     litter_changed_on: "Cambiada el",
     sec_cats: "Gatos",
-    cats_order_hint: "del más ligero al más pesado",
+    cats_order_hint: "sin peso de referencia: del más ligero al más pesado",
+    opt_cat_weight: "Peso de referencia del gato",
+    cat_reference_short: "ref.",
     opt_cat_count: "Número de gatos",
     opt_cat_name: "Nombre del gato",
     cat_default_name: "Gato",
@@ -448,10 +456,13 @@ function dayKey(ts) {
 }
 
 // Returns one entry per cat: recent average, last-30-days daily averages, and whether it made the latest visit
-function buildCatView(samples, k) {
-  if (samples.length < k * 3) return null;
-  const centroids = clusterWeights(samples.map((s) => s[1]), k);
-  const ambiguous = centroids.some((c, i) => i > 0 && c - centroids[i - 1] < CAT_MIN_GAP);
+// With a reference weight for every cat, samples go to the nearest reference; otherwise they are clustered
+function buildCatView(samples, k, refs = []) {
+  const useRefs = refs.length === k && refs.every(isValidCatWeight);
+  if (samples.length < (useRefs ? 1 : k * 3)) return null;
+  const centroids = useRefs ? refs : clusterWeights(samples.map((s) => s[1]), k);
+  const sortedCentroids = [...centroids].sort((a, b) => a - b);
+  const ambiguous = sortedCentroids.some((c, i) => i > 0 && c - sortedCentroids[i - 1] < CAT_MIN_GAP);
   const perCat = Array.from({ length: k }, () => ({ weights: [], days: new Map() }));
   for (const [ts, w] of samples) {
     const cat = perCat[nearestCentroid(w, centroids)];
@@ -465,6 +476,7 @@ function buildCatView(samples, k) {
   const cats = perCat.map((c, i) => ({
     avg: c.weights.length ? mean(c.weights.slice(-5)) : null,
     series: [...c.days.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).slice(-30).map(([, ws]) => mean(ws)),
+    ref: useRefs ? refs[i] : null,
     isLast: i === lastCat,
   }));
   return { cats, ambiguous };
@@ -875,7 +887,8 @@ class LitterCard extends HTMLElement {
     const binScale = this._config.bin_scale ?? overlayDefaults.bin_scale ?? 1;
 
     const catCount = this._catCount();
-    const catView = catCount ? buildCatView(this._catSamples, catCount) : null;
+    const catRefs = Array.from({ length: catCount }, (_, i) => parseFloat(this._config[`cat_weight_${i + 1}`]));
+    const catView = catCount ? buildCatView(this._catSamples, catCount, catRefs) : null;
     const catName = (i) => this._config[`cat_name_${i + 1}`] || `${t("cat_default_name", lang)} ${i + 1}`;
 
     const litterDateX = this._config.litter_date_pos_x ?? overlayDefaults.litter_date_pos_x ?? 37;
@@ -1002,6 +1015,7 @@ class LitterCard extends HTMLElement {
                   <div class="cat-item ${c.isLast ? 'current' : ''}">
                     <div class="cat-name">${escapeHtml(catName(i))}</div>
                     <div class="cat-weight">${c.avg === null ? '--' : escapeHtml(c.avg.toFixed(2))} ${escapeHtml(weightUnit)}</div>
+                    ${c.ref !== null ? `<div class="cat-ref">${t("cat_reference_short", lang)} ${escapeHtml(c.ref)} ${escapeHtml(weightUnit)}</div>` : ''}
                     ${c.series.length > 1 ? `<svg class="cat-spark" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true"><polyline points="${sparklinePoints(c.series)}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline></svg>` : ''}
                   </div>
                 `).join('')}
@@ -1279,6 +1293,7 @@ class LitterCardEditor extends HTMLElement {
       delete newConfig[key];
     } else {
       if (
+        /^cat_weight_[1-6]$/.test(key) ||
         [
           "entrance_pos_x",
           "entrance_pos_y",
@@ -1391,9 +1406,10 @@ class LitterCardEditor extends HTMLElement {
       // Cats
       { header: `${t("sec_cats", lang)} (${t("cats_order_hint", lang)})` },
       { key: "cat_count", label: t("opt_cat_count", lang), type: "number", min: 0, max: 6, step: 1, default: 0 },
-      ...Array.from({ length: Math.min(Math.max(Math.floor(Number(this._config?.cat_count)) || 0, 0), 6) }, (_, i) => (
-        { key: `cat_name_${i + 1}`, label: `${t("opt_cat_name", lang)} ${i + 1}`, type: "text" }
-      )),
+      ...Array.from({ length: Math.min(Math.max(Math.floor(Number(this._config?.cat_count)) || 0, 0), 6) }, (_, i) => [
+        { key: `cat_name_${i + 1}`, label: `${t("opt_cat_name", lang)} ${i + 1}`, type: "text" },
+        { key: `cat_weight_${i + 1}`, label: `${t("opt_cat_weight", lang)} ${i + 1}`, type: "number", min: 0, max: 30, step: 0.1 },
+      ]).flat(),
       // Custom Positioning & Sizing
       { header: t("sec_positioning", lang) },
       { key: "entrance_pos_x", label: t("opt_entrance_pos_x", lang), type: "number", min: 0, max: 100, step: 0.5, default: selectedModel?.overlay?.entrance_pos_x ?? 50 },
