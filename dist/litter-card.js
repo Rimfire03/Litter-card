@@ -824,7 +824,7 @@ export const EDITOR_STYLES = `
 `;
 
 
-const CARD_VERSION = "0.47";
+const CARD_VERSION = "0.48";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -2078,7 +2078,10 @@ class LitterCardEditor extends HTMLElement {
   }
 
   setConfig(config) {
-    this._config = config || {};
+    const next = config || {};
+    // Home Assistant echoes our own edit back: re-rendering would drop focus and scroll position
+    if (this._rendered && JSON.stringify(next) === JSON.stringify(this._config)) return;
+    this._config = next;
     this._render();
   }
 
@@ -2412,22 +2415,27 @@ class LitterCardEditor extends HTMLElement {
       selectEl.addEventListener("change", (e) => {
         const key = e.target.getAttribute("data-key");
         this._valueChanged(key, e.target.value);
-        if (key === 'model') {
+        if (key === 'model' || key === 'language') {
           this._render();
         }
       });
     });
 
     this.shadowRoot.querySelectorAll("input.text-input").forEach(inputEl => {
-      inputEl.addEventListener("input", (e) => {
+      const update = (e) => {
         const key = e.target.getAttribute("data-key");
         this._valueChanged(key, e.target.value);
-      });
-      inputEl.addEventListener("change", (e) => {
-        const key = e.target.getAttribute("data-key");
-        this._valueChanged(key, e.target.value);
-      });
+        if (key === "cat_count") {
+          // The number of name fields depends on it
+          this._render();
+          this.shadowRoot.querySelector(`input[data-key="${key}"]`)?.focus();
+        }
+      };
+      inputEl.addEventListener("input", update);
+      inputEl.addEventListener("change", update);
     });
+
+    this._rendered = true;
   }
 }
 
