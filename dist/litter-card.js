@@ -341,6 +341,51 @@ export function getCardStyles({
           color: var(--primary-color, #0284c7);
         }
 
+        /* Per-cat weight tracking */
+        .cats-section {
+          margin-bottom: 16px;
+        }
+        .cats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+          gap: 8px;
+        }
+        .cat-item {
+          background: var(--secondary-background-color, rgba(125, 125, 125, 0.06));
+          border: 1px solid var(--divider-color, rgba(125, 125, 125, 0.08));
+          border-radius: 12px;
+          padding: 8px 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .cat-item.current {
+          border-color: var(--primary-color, #0284c7);
+        }
+        .cat-name {
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: var(--primary-text-color, #1e293b);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .cat-weight {
+          font-size: 0.95rem;
+          font-weight: 700;
+          color: var(--primary-text-color, #1e293b);
+        }
+        .cat-spark {
+          width: 100%;
+          height: 28px;
+          color: var(--primary-color, #0284c7);
+        }
+        .cats-note {
+          font-size: 0.7rem;
+          color: var(--secondary-text-color, #64748b);
+          margin-top: 6px;
+        }
+
         /* Quick Stats Grid */
         .stats-grid {
           display: grid;
@@ -779,7 +824,7 @@ export const EDITOR_STYLES = `
 `;
 
 
-const CARD_VERSION = "0.44";
+const CARD_VERSION = "0.47";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -855,6 +900,13 @@ const TRANSLATIONS = {
     opt_bin_pos_y: "Position Y alerte sac (%)",
     opt_bin_scale: "Échelle alerte sac",
     litter_changed_on: "Changée le",
+    sec_cats: "Chats",
+    cats_order_hint: "du plus léger au plus lourd",
+    opt_cat_count: "Nombre de chats",
+    opt_cat_name: "Nom du chat",
+    cat_default_name: "Chat",
+    cats_collecting: "Collecte des pesées en cours…",
+    cats_ambiguous: "Poids trop proches : les chats peuvent être confondus.",
     opt_litter_date_pos_x: "Position X date litière (%)",
     opt_litter_date_pos_y: "Position Y date litière (%)",
     shape_circle: "Cercle",
@@ -930,6 +982,13 @@ const TRANSLATIONS = {
     opt_bin_pos_y: "Bin Alert Position Y (%)",
     opt_bin_scale: "Bin Alert Scale",
     litter_changed_on: "Changed on",
+    sec_cats: "Cats",
+    cats_order_hint: "lightest to heaviest",
+    opt_cat_count: "Number of cats",
+    opt_cat_name: "Cat name",
+    cat_default_name: "Cat",
+    cats_collecting: "Collecting weigh-ins…",
+    cats_ambiguous: "Weights too close: cats may be mixed up.",
     opt_litter_date_pos_x: "Litter Date Position X (%)",
     opt_litter_date_pos_y: "Litter Date Position Y (%)",
     shape_circle: "Circle",
@@ -1005,6 +1064,13 @@ const TRANSLATIONS = {
     opt_bin_pos_y: "Beutel-Warnung Position Y (%)",
     opt_bin_scale: "Beutel-Warnung Skalierung",
     litter_changed_on: "Gewechselt am",
+    sec_cats: "Katzen",
+    cats_order_hint: "von leicht nach schwer",
+    opt_cat_count: "Anzahl der Katzen",
+    opt_cat_name: "Name der Katze",
+    cat_default_name: "Katze",
+    cats_collecting: "Wägungen werden gesammelt…",
+    cats_ambiguous: "Gewichte zu ähnlich: Katzen können verwechselt werden.",
     opt_litter_date_pos_x: "Streu-Datum Position X (%)",
     opt_litter_date_pos_y: "Streu-Datum Position Y (%)",
     shape_circle: "Kreis",
@@ -1080,6 +1146,13 @@ const TRANSLATIONS = {
     opt_bin_pos_y: "Posición Y alerta bolsa (%)",
     opt_bin_scale: "Escala alerta bolsa",
     litter_changed_on: "Cambiada el",
+    sec_cats: "Gatos",
+    cats_order_hint: "del más ligero al más pesado",
+    opt_cat_count: "Número de gatos",
+    opt_cat_name: "Nombre del gato",
+    cat_default_name: "Gato",
+    cats_collecting: "Recopilando pesajes…",
+    cats_ambiguous: "Pesos demasiado cercanos: los gatos pueden confundirse.",
     opt_litter_date_pos_x: "Posición X fecha arena (%)",
     opt_litter_date_pos_y: "Posición Y fecha arena (%)",
     shape_circle: "Círculo",
@@ -1138,6 +1211,97 @@ function formatDateState(stateStr, lang) {
   return d.toLocaleDateString(lang, { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
+const CAT_STORE_KEY = "litter_card_cat_weights";
+const CAT_MAX_SAMPLES = 600;
+const CAT_MIN_WEIGHT = 0.3;
+const CAT_MAX_WEIGHT = 30;
+const CAT_MIN_GAP = 0.4;
+
+function isValidCatWeight(w) {
+  return Number.isFinite(w) && w >= CAT_MIN_WEIGHT && w <= CAT_MAX_WEIGHT;
+}
+
+// samples are [unixSeconds, weight] pairs
+function mergeCatSamples(...lists) {
+  const byTs = new Map();
+  for (const list of lists) {
+    for (const [ts, w] of list || []) {
+      if (isValidCatWeight(w)) byTs.set(ts, w);
+    }
+  }
+  return [...byTs.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .slice(-CAT_MAX_SAMPLES);
+}
+
+// 1-D k-means, centroids returned in ascending order
+function clusterWeights(weights, k) {
+  const sorted = [...weights].sort((a, b) => a - b);
+  let centroids = Array.from({ length: k }, (_, i) =>
+    sorted[Math.min(sorted.length - 1, Math.floor(((i + 0.5) * sorted.length) / k))]
+  );
+  for (let iter = 0; iter < 30; iter++) {
+    const sums = new Array(k).fill(0);
+    const counts = new Array(k).fill(0);
+    for (const w of sorted) {
+      const c = nearestCentroid(w, centroids);
+      sums[c] += w;
+      counts[c] += 1;
+    }
+    const next = centroids.map((c, i) => (counts[i] ? sums[i] / counts[i] : c));
+    const moved = next.some((c, i) => Math.abs(c - centroids[i]) > 1e-6);
+    centroids = next;
+    if (!moved) break;
+  }
+  return centroids.sort((a, b) => a - b);
+}
+
+function nearestCentroid(w, centroids) {
+  let best = 0;
+  for (let i = 1; i < centroids.length; i++) {
+    if (Math.abs(w - centroids[i]) < Math.abs(w - centroids[best])) best = i;
+  }
+  return best;
+}
+
+function dayKey(ts) {
+  const d = new Date(ts * 1000);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Returns one entry per cat: recent average, last-30-days daily averages, and whether it made the latest visit
+function buildCatView(samples, k) {
+  if (samples.length < k * 3) return null;
+  const centroids = clusterWeights(samples.map((s) => s[1]), k);
+  const ambiguous = centroids.some((c, i) => i > 0 && c - centroids[i - 1] < CAT_MIN_GAP);
+  const perCat = Array.from({ length: k }, () => ({ weights: [], days: new Map() }));
+  for (const [ts, w] of samples) {
+    const cat = perCat[nearestCentroid(w, centroids)];
+    cat.weights.push(w);
+    const key = dayKey(ts);
+    if (!cat.days.has(key)) cat.days.set(key, []);
+    cat.days.get(key).push(w);
+  }
+  const lastCat = nearestCentroid(samples[samples.length - 1][1], centroids);
+  const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+  const cats = perCat.map((c, i) => ({
+    avg: c.weights.length ? mean(c.weights.slice(-5)) : null,
+    series: [...c.days.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).slice(-30).map(([, ws]) => mean(ws)),
+    isLast: i === lastCat,
+  }));
+  return { cats, ambiguous };
+}
+
+function sparklinePoints(series) {
+  if (series.length < 2) return "";
+  const min = Math.min(...series);
+  const max = Math.max(...series);
+  const span = max - min || 1;
+  return series
+    .map((v, i) => `${((i / (series.length - 1)) * 100).toFixed(1)},${(max === min ? 14 : 26 - ((v - min) / span) * 24).toFixed(1)}`)
+    .join(" ");
+}
+
 const STATUS_ALIASES = {
   cleaning: ["cleaning", "nettoyage", "nettoyage en cours"],
   smoothing: ["smoothing", "leveling", "lissage", "nivellement"],
@@ -1163,6 +1327,9 @@ class LitterCard extends HTMLElement {
     this._configOpen = false;
     this._litterChangedAt = null;
     this._litterDateLoadedFor = null;
+    this._catSamples = [];
+    this._catLoadedFor = null;
+    this._catReady = null;
   }
 
   setConfig(config) {
@@ -1177,8 +1344,94 @@ class LitterCard extends HTMLElement {
     const oldHass = this._hass;
     this._hass = hass;
     this._loadLitterDate();
+    this._loadCatSamples();
+    this._recordCatSample();
     if (this._hasChanged(oldHass, hass)) {
       this._render();
+    }
+  }
+
+  _catCount() {
+    const n = Math.floor(Number(this._config.cat_count));
+    return n >= 1 && this._config.sensor_cat_weight ? Math.min(n, 6) : 0;
+  }
+
+  async _loadCatSamples() {
+    const id = this._config.sensor_cat_weight;
+    if (!this._catCount() || !this._hass || this._catLoadedFor === id) return;
+    this._catLoadedFor = id;
+    this._catReady = null;
+    this._catSamples = [];
+
+    let stored = [];
+    try {
+      const res = await this._hass.callWS({ type: "frontend/get_user_data", key: CAT_STORE_KEY });
+      stored = res?.value?.[id] || [];
+    } catch (err) {
+      console.warn("litter-card: cannot read stored cat weights", err);
+    }
+    if (!stored.length) {
+      try {
+        stored = JSON.parse(localStorage.getItem(`${CAT_STORE_KEY}:${id}`) || "[]");
+      } catch (err) {}
+    }
+    const history = await this._catHistory(id);
+    if (this._config.sensor_cat_weight !== id) return;
+
+    this._catSamples = mergeCatSamples(stored, history);
+    this._catReady = id;
+    this._render();
+    this._saveCatSamples();
+  }
+
+  async _catHistory(id) {
+    try {
+      const end = new Date();
+      const start = new Date(end.getTime() - 30 * 24 * 3600 * 1000);
+      const res = await this._hass.callWS({
+        type: "history/history_during_period",
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        entity_ids: [id],
+        include_start_time_state: false,
+        significant_changes_only: false,
+        minimal_response: true,
+        no_attributes: true,
+      });
+      return (res?.[id] || [])
+        .map((item) => [Math.round(item.lc ?? item.lu ?? 0), parseFloat(item.s)])
+        .filter(([ts, w]) => ts > 0 && isValidCatWeight(w));
+    } catch (err) {
+      return [];
+    }
+  }
+
+  _recordCatSample() {
+    const id = this._config.sensor_cat_weight;
+    if (!this._catCount() || this._catReady !== id) return;
+    const st = this._getState(id);
+    const w = st ? parseFloat(st.state) : NaN;
+    const ts = st ? Math.round(new Date(st.last_changed).getTime() / 1000) : 0;
+    if (!isValidCatWeight(w) || !ts || this._catSamples.some((s) => s[0] === ts)) return;
+    this._catSamples = mergeCatSamples(this._catSamples, [[ts, w]]);
+    this._saveCatSamples();
+  }
+
+  async _saveCatSamples() {
+    const id = this._config.sensor_cat_weight;
+    const samples = this._catSamples;
+    try {
+      localStorage.setItem(`${CAT_STORE_KEY}:${id}`, JSON.stringify(samples));
+    } catch (err) {}
+    try {
+      const res = await this._hass.callWS({ type: "frontend/get_user_data", key: CAT_STORE_KEY });
+      await this._hass.callWS({
+        type: "frontend/set_user_data",
+        key: CAT_STORE_KEY,
+        value: { ...(res?.value || {}), [id]: samples },
+      });
+    } catch (err) {
+      console.warn("litter-card: cannot store cat weights", err);
     }
   }
 
@@ -1443,6 +1696,10 @@ class LitterCard extends HTMLElement {
     const binY = this._config.bin_pos_y ?? overlayDefaults.bin_pos_y ?? 14;
     const binScale = this._config.bin_scale ?? overlayDefaults.bin_scale ?? 1;
 
+    const catCount = this._catCount();
+    const catView = catCount ? buildCatView(this._catSamples, catCount) : null;
+    const catName = (i) => this._config[`cat_name_${i + 1}`] || `${t("cat_default_name", lang)} ${i + 1}`;
+
     const litterDateX = this._config.litter_date_pos_x ?? overlayDefaults.litter_date_pos_x ?? 37;
     const litterDateY = this._config.litter_date_pos_y ?? overlayDefaults.litter_date_pos_y ?? 85;
 
@@ -1554,6 +1811,25 @@ class LitterCard extends HTMLElement {
                 <div class="stat-lbl">${t("stat_duration", lang)}</div>
               </div>
             ` : ''}
+          </div>
+        ` : ''}
+
+        <!-- Per-cat weight tracking -->
+        ${catCount ? `
+          <div class="cats-section">
+            <div class="section-title">${t("sec_cats", lang)}</div>
+            ${catView ? `
+              <div class="cats-grid">
+                ${catView.cats.map((c, i) => `
+                  <div class="cat-item ${c.isLast ? 'current' : ''}">
+                    <div class="cat-name">${escapeHtml(catName(i))}</div>
+                    <div class="cat-weight">${c.avg === null ? '--' : escapeHtml(c.avg.toFixed(2))} ${escapeHtml(weightUnit)}</div>
+                    ${c.series.length > 1 ? `<svg class="cat-spark" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true"><polyline points="${sparklinePoints(c.series)}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline></svg>` : ''}
+                  </div>
+                `).join('')}
+              </div>
+              ${catView.ambiguous ? `<div class="cats-note">${t("cats_ambiguous", lang)}</div>` : ''}
+            ` : `<div class="cats-note">${t("cats_collecting", lang)}</div>`}
           </div>
         ` : ''}
 
@@ -1835,6 +2111,7 @@ class LitterCardEditor extends HTMLElement {
           "bin_scale",
           "litter_date_pos_x",
           "litter_date_pos_y",
+          "cat_count",
         ].includes(key)
       ) {
         newConfig[key] = isNaN(value) ? value : parseFloat(value);
@@ -1930,6 +2207,12 @@ class LitterCardEditor extends HTMLElement {
       ...(activeSensors.length > 0 ? [{ header: t("sensors_header", lang) }, ...activeSensors] : []),
       // Settings
       ...(activeSettings.length > 0 ? [{ header: t("sec_settings", lang) }, ...activeSettings] : []),
+      // Cats
+      { header: `${t("sec_cats", lang)} (${t("cats_order_hint", lang)})` },
+      { key: "cat_count", label: t("opt_cat_count", lang), type: "number", min: 0, max: 6, step: 1, default: 0 },
+      ...Array.from({ length: Math.min(Math.max(Math.floor(Number(this._config?.cat_count)) || 0, 0), 6) }, (_, i) => (
+        { key: `cat_name_${i + 1}`, label: `${t("opt_cat_name", lang)} ${i + 1}`, type: "text" }
+      )),
       // Custom Positioning & Sizing
       { header: t("sec_positioning", lang) },
       { key: "entrance_pos_x", label: t("opt_entrance_pos_x", lang), type: "number", min: 0, max: 100, step: 0.5, default: selectedModel?.overlay?.entrance_pos_x ?? 50 },

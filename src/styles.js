@@ -211,6 +211,51 @@ export function getCardStyles({
           color: var(--primary-color, #0284c7);
         }
 
+        /* Per-cat weight tracking */
+        .cats-section {
+          margin-bottom: 16px;
+        }
+        .cats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+          gap: 8px;
+        }
+        .cat-item {
+          background: var(--secondary-background-color, rgba(125, 125, 125, 0.06));
+          border: 1px solid var(--divider-color, rgba(125, 125, 125, 0.08));
+          border-radius: 12px;
+          padding: 8px 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .cat-item.current {
+          border-color: var(--primary-color, #0284c7);
+        }
+        .cat-name {
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: var(--primary-text-color, #1e293b);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .cat-weight {
+          font-size: 0.95rem;
+          font-weight: 700;
+          color: var(--primary-text-color, #1e293b);
+        }
+        .cat-spark {
+          width: 100%;
+          height: 28px;
+          color: var(--primary-color, #0284c7);
+        }
+        .cats-note {
+          font-size: 0.7rem;
+          color: var(--secondary-text-color, #64748b);
+          margin-top: 6px;
+        }
+
         /* Quick Stats Grid */
         .stats-grid {
           display: grid;
