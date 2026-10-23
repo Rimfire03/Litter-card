@@ -828,7 +828,7 @@ export const EDITOR_STYLES = `
 `;
 
 
-const CARD_VERSION = "0.50";
+const CARD_VERSION = "0.51";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -907,6 +907,8 @@ const TRANSLATIONS = {
     sec_cats: "Chats",
     cats_order_hint: "sans poids de référence : du plus léger au plus lourd",
     opt_cat_weight: "Poids de référence du chat",
+    opt_cat_history_days: "Période de l'historique du poids",
+    unit_days: "jours",
     cat_reference_short: "réf.",
     cat_weight_hint: "nombre décimal en {unit}, avec un point, ex. 4.2",
     opt_cat_count: "Nombre de chats",
@@ -992,6 +994,8 @@ const TRANSLATIONS = {
     sec_cats: "Cats",
     cats_order_hint: "without reference weights: lightest to heaviest",
     opt_cat_weight: "Cat reference weight",
+    opt_cat_history_days: "Weight history period",
+    unit_days: "days",
     cat_weight_hint: "decimal number in {unit}, with a dot, e.g. 4.2",
     cat_reference_short: "ref.",
     opt_cat_count: "Number of cats",
@@ -1077,6 +1081,8 @@ const TRANSLATIONS = {
     sec_cats: "Katzen",
     cats_order_hint: "ohne Referenzgewicht: von leicht nach schwer",
     opt_cat_weight: "Referenzgewicht der Katze",
+    opt_cat_history_days: "Zeitraum des Gewichtsverlaufs",
+    unit_days: "Tage",
     cat_reference_short: "Ref.",
     cat_weight_hint: "Dezimalzahl in {unit}, mit Punkt, z. B. 4.2",
     opt_cat_count: "Anzahl der Katzen",
@@ -1162,6 +1168,8 @@ const TRANSLATIONS = {
     sec_cats: "Gatos",
     cats_order_hint: "sin peso de referencia: del más ligero al más pesado",
     opt_cat_weight: "Peso de referencia del gato",
+    opt_cat_history_days: "Período del historial de peso",
+    unit_days: "días",
     cat_weight_hint: "número decimal en {unit}, con punto, p. ej. 4.2",
     cat_reference_short: "ref.",
     opt_cat_count: "Número de gatos",
@@ -1228,7 +1236,7 @@ function formatDateState(stateStr, lang) {
 }
 
 const CAT_STORE_KEY = "litter_card_cat_weights";
-const CAT_MAX_SAMPLES = 600;
+const CAT_MAX_SAMPLES = 2000;
 const CAT_MIN_WEIGHT = 0.3;
 const CAT_MAX_WEIGHT = 30;
 const CAT_MIN_GAP = 0.4;
@@ -1290,7 +1298,8 @@ function dayKey(ts) {
 
 // Returns one entry per cat: recent average, last-30-days daily averages, and whether it made the latest visit
 // With a reference weight for every cat, samples go to the nearest reference; otherwise they are clustered
-function buildCatView(samples, k, refs = []) {
+function buildCatView(samples, k, refs = [], days = 30, nowSec = Math.floor(Date.now() / 1000)) {
+  const since = nowSec - days * 86400;
   const useRefs = refs.length === k && refs.every(isValidCatWeight);
   if (samples.length < (useRefs ? 1 : k * 3)) return null;
   let centroids = useRefs ? [...refs] : clusterWeights(samples.map((s) => s[1]), k);
@@ -1311,6 +1320,7 @@ function buildCatView(samples, k, refs = []) {
     if (catIndex < 0) return;
     const cat = perCat[catIndex];
     cat.weights.push(w);
+    if (ts < since) return;
     const key = dayKey(ts);
     if (!cat.days.has(key)) cat.days.set(key, []);
     cat.days.get(key).push(w);
@@ -1319,7 +1329,7 @@ function buildCatView(samples, k, refs = []) {
   const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
   const cats = perCat.map((c, i) => ({
     avg: c.weights.length ? mean(c.weights.slice(-5)) : null,
-    series: [...c.days.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).slice(-30).map(([, ws]) => mean(ws)),
+    series: [...c.days.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([, ws]) => mean(ws)),
     ref: useRefs ? centroids[i] : null,
     isLast: i === lastCat,
   }));
@@ -1390,10 +1400,16 @@ class LitterCard extends HTMLElement {
     return n >= 1 && this._config.sensor_cat_weight ? Math.min(n, 6) : 0;
   }
 
+  _catDays() {
+    const d = Math.floor(Number(this._config.cat_history_days));
+    return d >= 1 && d <= 365 ? d : 30;
+  }
+
   async _loadCatSamples() {
     const id = this._config.sensor_cat_weight;
-    if (!this._catCount() || !this._hass || this._catLoadedFor === id) return;
-    this._catLoadedFor = id;
+    const loadKey = `${id}|${this._catDays()}`;
+    if (!this._catCount() || !this._hass || this._catLoadedFor === loadKey) return;
+    this._catLoadedFor = loadKey;
     this._catReady = null;
     this._catSamples = [];
 
@@ -1409,7 +1425,7 @@ class LitterCard extends HTMLElement {
         stored = JSON.parse(localStorage.getItem(`${CAT_STORE_KEY}:${id}`) || "[]");
       } catch (err) {}
     }
-    const history = await this._catHistory(id);
+    const history = await this._catHistory(id, this._catDays());
     if (this._config.sensor_cat_weight !== id) return;
 
     this._catSamples = mergeCatSamples(stored, history);
@@ -1418,10 +1434,10 @@ class LitterCard extends HTMLElement {
     this._saveCatSamples();
   }
 
-  async _catHistory(id) {
+  async _catHistory(id, days) {
     try {
       const end = new Date();
-      const start = new Date(end.getTime() - 30 * 24 * 3600 * 1000);
+      const start = new Date(end.getTime() - days * 24 * 3600 * 1000);
       const res = await this._hass.callWS({
         type: "history/history_during_period",
         start_time: start.toISOString(),
@@ -1732,7 +1748,8 @@ class LitterCard extends HTMLElement {
 
     const catCount = this._catCount();
     const catRefs = Array.from({ length: catCount }, (_, i) => parseFloat(this._config[`cat_weight_${i + 1}`]));
-    const catView = catCount ? buildCatView(this._catSamples, catCount, catRefs) : null;
+    const catDays = this._catDays();
+    const catView = catCount ? buildCatView(this._catSamples, catCount, catRefs, catDays) : null;
     const catName = (i) => this._config[`cat_name_${i + 1}`] || `${t("cat_default_name", lang)} ${i + 1}`;
 
     const litterDateX = this._config.litter_date_pos_x ?? overlayDefaults.litter_date_pos_x ?? 37;
@@ -1852,7 +1869,7 @@ class LitterCard extends HTMLElement {
         <!-- Per-cat weight tracking -->
         ${catCount ? `
           <div class="cats-section">
-            <div class="section-title">${t("sec_cats", lang)}</div>
+            <div class="section-title">${t("sec_cats", lang)} · ${catDays} ${t("unit_days", lang)}</div>
             ${catView ? `
               <div class="cats-grid">
                 ${catView.cats.map((c, i) => `
@@ -2138,6 +2155,7 @@ class LitterCardEditor extends HTMLElement {
     } else {
       if (
         /^cat_weight_[1-6]$/.test(key) ||
+        key === "cat_history_days" ||
         [
           "entrance_pos_x",
           "entrance_pos_y",
@@ -2251,6 +2269,13 @@ class LitterCardEditor extends HTMLElement {
       // Cats
       { header: `${t("sec_cats", lang)} (${t("cats_order_hint", lang)})` },
       { key: "cat_count", label: t("opt_cat_count", lang), type: "number", min: 0, max: 6, step: 1, default: 0 },
+      {
+        key: "cat_history_days",
+        label: t("opt_cat_history_days", lang),
+        type: "select_options",
+        default: 30,
+        options: [7, 14, 30, 90, 180].map((d) => ({ value: d, label: `${d} ${t("unit_days", lang)}` })),
+      },
       ...Array.from({ length: Math.min(Math.max(Math.floor(Number(this._config?.cat_count)) || 0, 0), 6) }, (_, i) => [
         { key: `cat_name_${i + 1}`, label: `${t("opt_cat_name", lang)} ${i + 1}`, type: "text" },
         { key: `cat_weight_${i + 1}`, label: `${t("opt_cat_weight", lang)} ${i + 1} (${t("cat_weight_hint", lang).replace("{unit}", escapeHtml(catWeightUnit))})`, type: "number", min: 0, max: 30, step: 0.1 },
@@ -2310,7 +2335,7 @@ class LitterCardEditor extends HTMLElement {
             `;
           }
           if (field.type === "select_options") {
-            const currentVal = (this._config && this._config[field.key]) || (field.key === 'model' ? DEFAULT_MODEL_ID : '');
+            const currentVal = (this._config && this._config[field.key]) || (field.key === 'model' ? DEFAULT_MODEL_ID : (field.default ?? ''));
             return `
               <div class="row">
                 <span class="label">${field.label}</span>
