@@ -245,8 +245,47 @@ export function getCardStyles({
           font-weight: 700;
           color: var(--primary-text-color, #1e293b);
         }
-        .cat-ref {
-          font-size: 0.68rem;
+        .cats-grid.with-axes {
+          grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        }
+        .cat-chart {
+          display: flex;
+          gap: 4px;
+          margin-top: 4px;
+        }
+        .cat-yaxis {
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          height: 52px;
+          min-width: 1.8rem;
+          text-align: right;
+          font-size: 0.62rem;
+          line-height: 1;
+          color: var(--secondary-text-color, #64748b);
+        }
+        .cat-yaxis.flat {
+          justify-content: center;
+        }
+        .cat-plot {
+          flex: 1;
+          min-width: 0;
+        }
+        .cat-plot .cat-spark {
+          height: 52px;
+          display: block;
+        }
+        .cat-grid {
+          stroke: var(--divider-color, rgba(125, 125, 125, 0.35));
+          stroke-width: 1;
+          stroke-dasharray: 2 3;
+          vector-effect: non-scaling-stroke;
+        }
+        .cat-xaxis {
+          display: flex;
+          justify-content: space-between;
+          font-size: 0.62rem;
+          line-height: 1.2;
           color: var(--secondary-text-color, #64748b);
         }
         .cat-spark {

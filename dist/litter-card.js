@@ -375,8 +375,47 @@ export function getCardStyles({
           font-weight: 700;
           color: var(--primary-text-color, #1e293b);
         }
-        .cat-ref {
-          font-size: 0.68rem;
+        .cats-grid.with-axes {
+          grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        }
+        .cat-chart {
+          display: flex;
+          gap: 4px;
+          margin-top: 4px;
+        }
+        .cat-yaxis {
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          height: 52px;
+          min-width: 1.8rem;
+          text-align: right;
+          font-size: 0.62rem;
+          line-height: 1;
+          color: var(--secondary-text-color, #64748b);
+        }
+        .cat-yaxis.flat {
+          justify-content: center;
+        }
+        .cat-plot {
+          flex: 1;
+          min-width: 0;
+        }
+        .cat-plot .cat-spark {
+          height: 52px;
+          display: block;
+        }
+        .cat-grid {
+          stroke: var(--divider-color, rgba(125, 125, 125, 0.35));
+          stroke-width: 1;
+          stroke-dasharray: 2 3;
+          vector-effect: non-scaling-stroke;
+        }
+        .cat-xaxis {
+          display: flex;
+          justify-content: space-between;
+          font-size: 0.62rem;
+          line-height: 1.2;
           color: var(--secondary-text-color, #64748b);
         }
         .cat-spark {
@@ -828,7 +867,7 @@ export const EDITOR_STYLES = `
 `;
 
 
-const CARD_VERSION = "0.51";
+const CARD_VERSION = "0.52";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -908,8 +947,10 @@ const TRANSLATIONS = {
     cats_order_hint: "sans poids de référence : du plus léger au plus lourd",
     opt_cat_weight: "Poids de référence du chat",
     opt_cat_history_days: "Période de l'historique du poids",
+    opt_cat_show_axes: "Afficher les axes du graphique",
+    option_yes: "Oui",
+    option_no: "Non",
     unit_days: "jours",
-    cat_reference_short: "réf.",
     cat_weight_hint: "nombre décimal en {unit}, avec un point, ex. 4.2",
     opt_cat_count: "Nombre de chats",
     opt_cat_name: "Nom du chat",
@@ -995,9 +1036,11 @@ const TRANSLATIONS = {
     cats_order_hint: "without reference weights: lightest to heaviest",
     opt_cat_weight: "Cat reference weight",
     opt_cat_history_days: "Weight history period",
+    opt_cat_show_axes: "Show chart axes",
+    option_yes: "Yes",
+    option_no: "No",
     unit_days: "days",
     cat_weight_hint: "decimal number in {unit}, with a dot, e.g. 4.2",
-    cat_reference_short: "ref.",
     opt_cat_count: "Number of cats",
     opt_cat_name: "Cat name",
     cat_default_name: "Cat",
@@ -1082,8 +1125,10 @@ const TRANSLATIONS = {
     cats_order_hint: "ohne Referenzgewicht: von leicht nach schwer",
     opt_cat_weight: "Referenzgewicht der Katze",
     opt_cat_history_days: "Zeitraum des Gewichtsverlaufs",
+    opt_cat_show_axes: "Diagrammachsen anzeigen",
+    option_yes: "Ja",
+    option_no: "Nein",
     unit_days: "Tage",
-    cat_reference_short: "Ref.",
     cat_weight_hint: "Dezimalzahl in {unit}, mit Punkt, z. B. 4.2",
     opt_cat_count: "Anzahl der Katzen",
     opt_cat_name: "Name der Katze",
@@ -1169,9 +1214,11 @@ const TRANSLATIONS = {
     cats_order_hint: "sin peso de referencia: del más ligero al más pesado",
     opt_cat_weight: "Peso de referencia del gato",
     opt_cat_history_days: "Período del historial de peso",
+    opt_cat_show_axes: "Mostrar los ejes del gráfico",
+    option_yes: "Sí",
+    option_no: "No",
     unit_days: "días",
     cat_weight_hint: "número decimal en {unit}, con punto, p. ej. 4.2",
-    cat_reference_short: "ref.",
     opt_cat_count: "Número de gatos",
     opt_cat_name: "Nombre del gato",
     cat_default_name: "Gato",
@@ -1327,22 +1374,41 @@ function buildCatView(samples, k, refs = [], days = 30, nowSec = Math.floor(Date
   });
   const lastCat = useRefs ? assigned.findLast((i) => i >= 0) ?? -1 : assigned[assigned.length - 1];
   const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
-  const cats = perCat.map((c, i) => ({
-    avg: c.weights.length ? mean(c.weights.slice(-5)) : null,
-    series: [...c.days.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([, ws]) => mean(ws)),
-    ref: useRefs ? centroids[i] : null,
-    isLast: i === lastCat,
-  }));
+  const cats = perCat.map((c, i) => {
+    const entries = [...c.days.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([day, ws]) => ({ day, value: mean(ws) }));
+    return {
+      avg: c.weights.length ? mean(c.weights.slice(-5)) : null,
+      series: entries.map((e) => e.value),
+      days: entries.map((e) => e.day),
+      ref: useRefs ? centroids[i] : null,
+      isLast: i === lastCat,
+    };
+  });
   return { cats, ambiguous };
 }
 
-function sparklinePoints(series) {
+function dayStart(dayKeyStr) {
+  const [y, m, d] = dayKeyStr.split("-").map(Number);
+  return new Date(y, m - 1, d).getTime();
+}
+
+function formatDayShort(dayKeyStr, lang) {
+  return new Date(dayStart(dayKeyStr)).toLocaleDateString(lang, { day: "2-digit", month: "2-digit" });
+}
+
+// x follows the real dates when given (missing days stay visible), y spans min..max
+function sparklinePoints(series, days) {
   if (series.length < 2) return "";
   const min = Math.min(...series);
   const max = Math.max(...series);
   const span = max - min || 1;
+  const t0 = days ? dayStart(days[0]) : 0;
+  const tSpan = days ? dayStart(days[days.length - 1]) - t0 : 0;
   return series
-    .map((v, i) => `${((i / (series.length - 1)) * 100).toFixed(1)},${(max === min ? 14 : 26 - ((v - min) / span) * 24).toFixed(1)}`)
+    .map((v, i) => {
+      const x = tSpan > 0 ? ((dayStart(days[i]) - t0) / tSpan) * 100 : (i / (series.length - 1)) * 100;
+      return `${x.toFixed(1)},${(max === min ? 14 : 26 - ((v - min) / span) * 24).toFixed(1)}`;
+    })
     .join(" ");
 }
 
@@ -1751,6 +1817,22 @@ class LitterCard extends HTMLElement {
     const catDays = this._catDays();
     const catView = catCount ? buildCatView(this._catSamples, catCount, catRefs, catDays) : null;
     const catName = (i) => this._config[`cat_name_${i + 1}`] || `${t("cat_default_name", lang)} ${i + 1}`;
+    const showAxes = this._config.cat_show_axes !== "off" && this._config.cat_show_axes !== false;
+    const catChart = (c) => {
+      if (c.series.length < 2) return "";
+      const grid = showAxes
+        ? '<line class="cat-grid" x1="0" y1="2" x2="100" y2="2"></line><line class="cat-grid" x1="0" y1="26" x2="100" y2="26"></line>'
+        : "";
+      const svg = `<svg class="cat-spark" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true">${grid}<polyline points="${sparklinePoints(c.series, c.days)}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline></svg>`;
+      if (!showAxes) return svg;
+      const min = Math.min(...c.series);
+      const max = Math.max(...c.series);
+      const flat = max - min < 0.05;
+      const yLabels = flat
+        ? `<span>${escapeHtml(max.toFixed(1))}</span>`
+        : `<span>${escapeHtml(max.toFixed(1))}</span><span>${escapeHtml(min.toFixed(1))}</span>`;
+      return `<div class="cat-chart"><div class="cat-yaxis ${flat ? "flat" : ""}">${yLabels}</div><div class="cat-plot">${svg}<div class="cat-xaxis"><span>${escapeHtml(formatDayShort(c.days[0], lang))}</span><span>${escapeHtml(formatDayShort(c.days[c.days.length - 1], lang))}</span></div></div></div>`;
+    };
 
     const litterDateX = this._config.litter_date_pos_x ?? overlayDefaults.litter_date_pos_x ?? 37;
     const litterDateY = this._config.litter_date_pos_y ?? overlayDefaults.litter_date_pos_y ?? 85;
@@ -1871,13 +1953,11 @@ class LitterCard extends HTMLElement {
           <div class="cats-section">
             <div class="section-title">${t("sec_cats", lang)} · ${catDays} ${t("unit_days", lang)}</div>
             ${catView ? `
-              <div class="cats-grid">
+              <div class="cats-grid ${showAxes ? 'with-axes' : ''}">
                 ${catView.cats.map((c, i) => `
                   <div class="cat-item ${c.isLast ? 'current' : ''}">
                     <div class="cat-name">${escapeHtml(catName(i))}</div>
-                    <div class="cat-weight">${c.avg === null ? '--' : escapeHtml(c.avg.toFixed(2))} ${escapeHtml(weightUnit)}</div>
-                    ${c.ref !== null ? `<div class="cat-ref">${t("cat_reference_short", lang)} ${escapeHtml(c.ref.toFixed(2))} ${escapeHtml(weightUnit)}</div>` : ''}
-                    ${c.series.length > 1 ? `<svg class="cat-spark" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true"><polyline points="${sparklinePoints(c.series)}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline></svg>` : ''}
+                    <div class="cat-weight">${c.avg === null ? '--' : escapeHtml(c.avg.toFixed(2))} ${escapeHtml(weightUnit)}</div>                    ${catChart(c)}
                   </div>
                 `).join('')}
               </div>
@@ -2269,6 +2349,16 @@ class LitterCardEditor extends HTMLElement {
       // Cats
       { header: `${t("sec_cats", lang)} (${t("cats_order_hint", lang)})` },
       { key: "cat_count", label: t("opt_cat_count", lang), type: "number", min: 0, max: 6, step: 1, default: 0 },
+      {
+        key: "cat_show_axes",
+        label: t("opt_cat_show_axes", lang),
+        type: "select_options",
+        default: "on",
+        options: [
+          { value: "on", label: t("option_yes", lang) },
+          { value: "off", label: t("option_no", lang) },
+        ],
+      },
       {
         key: "cat_history_days",
         label: t("opt_cat_history_days", lang),
