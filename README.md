@@ -40,12 +40,17 @@ If you find this card helpful, consider buying me a coffee to support the develo
 
 - **Interactive Dynamic Visual**:
   - Embedded clean vector/image representation of the automatic litter box.
-  - **Entrance Halo & Indicator**: Illuminates in **Green** with pulsating glow when the cat is inside (`occupancy = on`) and in **Red** when clear/idle.
+  - **Entrance Halo & Indicator**: glows **green** when the litter box is free and **red** with a pulsing glow when a cat is inside (`occupancy = on`). It turns **grey** ("Litter box offline") when the status sensor is `unavailable`.
   - **Cat Weight Display**: Live weight value dynamically overlaid in the bottom circular dial.
   - **Waste Bin Status Alert**: Animated badge in the top right corner when the bag is full.
 - **Quick Statistics Overview**: Cleanings count, total visit counter, and duration of the last visit.
-- **Manual Control Action Buttons**: Clean, Level litter, Replace bag, Bag changed confirmation, and Restart device.
-- **Per-cat weight tracking**: set the number of cats and their names; the card groups the weigh-ins of the weight sensor into one group per cat (names are given from the lightest to the heaviest), or, when you set a reference weight for every cat (a decimal number with a dot, in the sensor's unit, for example `4.2`), assigns each weigh-in to the cat with the nearest reference. The references then adjust automatically as the cats' weight changes, and a weigh-in too far from every reference (a visitor) is ignored. The card shows each cat's recent weight with a graph over the period you choose (7 to 180 days, 30 by default), with its axes (weights and dates) that you can hide. The history is rebuilt from the sensor's recorded history and kept by the card. Cats with weights closer than 0.4 can be mixed up.
+- **Manual Control Action Buttons**: Clean, Level litter, Replace bag, Change litter ("Bag changed"), and Restart device.
+- **Status-aware effects**: the Clean, Level and Change litter buttons glow while the device is cleaning, leveling or emptying. When the bag is full, the status badge turns orange and blinks, and so does the Replace bag button. When the status is `unavailable`, the card shows the device as offline (grey halo, red status, no bag badge). Status values are recognised in English and in French (for example `cleaning` / `Nettoyage`, `smoothing` / `Lissage`, `emptying` / `Vidange`, `full` / `Plein`).
+- **Per-cat weight tracking** (set the number of cats and their names):
+  - Each weigh-in of the weight sensor is assigned to a cat: by grouping the weights (names go from the lightest to the heaviest), or, if you give a reference weight for every cat (a decimal number with a dot, in the sensor's unit, for example `4.2`), to the nearest reference.
+  - The references adjust automatically as the cats' weight changes, and a weigh-in too far from every reference (a visitor) is ignored. Cats whose weights are closer than 0.4 can be mixed up.
+  - Each cat gets its recent weight and a graph over the period you choose (7 to 180 days, 30 by default), with axes (weights and dates) that you can hide.
+  - The history is rebuilt from the sensor's recorded history and kept by the card.
 - **Last litter change date**: shown on the image and recorded by the card each time the "Bag changed" button is pressed (stored per Home Assistant user, with browser storage as fallback).
 - **Collapsible Settings & Configuration Accordion**:
   - Auto clean toggle (Switch)
@@ -180,12 +185,17 @@ cfg_unit: select.cat_litter_box_unit
 
 - **Rendu Visuel Interactif & Réactif** :
   - Silhouette intégrée de la machine automatique.
-  - **Aura & témoin d'entrée** : s'illumine en **Vert** pulsant lorsque le chat est présent (`occupation = on`) et en **Rouge** en veille.
+  - **Aura & témoin d'entrée** : s'illumine en **vert** quand le bac est libre et en **rouge** pulsant quand un chat est présent (`occupation = on`). Elle devient **grise** (« Litière hors ligne ») quand le capteur d'état est `unavailable`.
   - **Affichage du Poids du Chat** : valeur en temps réel intégrée directement dans le rond noir inférieur.
   - **Alerte Sac Plein** : badge dynamique et animé en haut à droite de l'image.
 - **Statistiques en un coup d'œil** : Nombre de nettoyages, nombre total de visites et durée du passage.
-- **Boutons de Contrôle Manuel** : Nettoyer, Niveler, Remplacement du sac, Changer la litière, Redémarrer.
-- **Suivi du poids par chat** : indiquez le nombre de chats et leurs noms ; la carte regroupe les pesées du capteur de poids en un groupe par chat (noms donnés du plus léger au plus lourd), ou, si vous indiquez un poids de référence pour chaque chat (nombre décimal avec un point, dans l'unité du capteur, par exemple `4.2`), attribue chaque pesée au chat dont la référence est la plus proche. Les références s'ajustent alors automatiquement avec l'évolution du poids des chats, et une pesée trop éloignée de toutes les références (un visiteur) est ignorée. La carte affiche le poids récent de chaque chat avec un graphique sur la période choisie (de 7 à 180 jours, 30 par défaut), avec ses axes (poids et dates) que vous pouvez masquer. L'historique est reconstruit à partir de l'historique enregistré du capteur et conservé par la carte. Des chats dont les poids sont à moins de 0,4 d'écart peuvent être confondus.
+- **Boutons de Contrôle Manuel** : Nettoyer, Niveler, Remplacer sac, Changer la litière, Redémarrer.
+- **Effets selon l'état** : les boutons Nettoyer, Niveler et Changer la litière s'illuminent pendant le nettoyage, le lissage ou la vidange. Quand le sac est plein, le badge d'état passe à l'orange et clignote, tout comme le bouton Remplacer sac. Quand l'état est `unavailable`, la carte affiche le bac comme hors ligne (aura grise, état en rouge, pas de badge de sac). Les états sont reconnus en anglais et en français (par exemple `cleaning` / `Nettoyage`, `smoothing` / `Lissage`, `emptying` / `Vidange`, `full` / `Plein`).
+- **Suivi du poids par chat** (indiquez le nombre de chats et leurs noms) :
+  - Chaque pesée du capteur de poids est attribuée à un chat : en regroupant les poids (noms donnés du plus léger au plus lourd), ou, si vous indiquez un poids de référence pour chaque chat (nombre décimal avec un point, dans l'unité du capteur, par exemple `4.2`), au chat dont la référence est la plus proche.
+  - Les références s'ajustent automatiquement avec l'évolution du poids des chats, et une pesée trop éloignée de toutes les références (un visiteur) est ignorée. Des chats dont les poids sont à moins de 0,4 d'écart peuvent être confondus.
+  - Chaque chat a son poids récent et un graphique sur la période choisie (de 7 à 180 jours, 30 par défaut), avec des axes (poids et dates) que vous pouvez masquer.
+  - L'historique est reconstruit à partir de l'historique enregistré du capteur et conservé par la carte.
 - **Date du dernier changement de litière** : affichée sur l'image et enregistrée par la carte à chaque appui sur « Changer la litière » (stockée par utilisateur Home Assistant, avec le navigateur en secours).
 - **Menu Déroulant Paramètres & Configuration** :
   - Nettoyage automatique (Interrupteur)
