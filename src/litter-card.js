@@ -2,7 +2,7 @@ import { DEFAULT_IMAGE, MODEL_IMAGES } from './image-data.js';
 import { LITTER_MODELS, DEFAULT_MODEL_ID, getModelConfig } from './models/index.js';
 import { getCardStyles, EDITOR_STYLES } from './styles.js';
 
-const CARD_VERSION = "0.54-dev";
+const CARD_VERSION = "0.55-dev";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -993,6 +993,12 @@ class LitterCard extends HTMLElement {
     const blinkLevel = rawStatus === "smoothing" ? "blink" : "";
     const blinkBagChanged = rawStatus === "emptying" ? "blink" : "";
 
+    // Drum animation while leveling; a re-render keeps the phase of the running cycle
+    const isLeveling = rawStatus === "smoothing";
+    if (!isLeveling) this._levelStart = null;
+    else if (!this._levelStart) this._levelStart = Date.now();
+    const drumElapsed = isLeveling ? (((Date.now() - this._levelStart) / 1000) % 10).toFixed(2) : 0;
+
     const cleaningsState = this._getState(this._config.sensor_cleanings_count);
     const visitsState = this._getState(this._config.sensor_total_visits);
     const durationState = this._getState(this._config.sensor_visit_duration);
@@ -1078,6 +1084,7 @@ class LitterCard extends HTMLElement {
         binX, binY, binScale,
         litterDateX, litterDateY,
         configOpen: this._configOpen,
+        drumElapsed,
       })}</style>
 
       <ha-card>
@@ -1096,6 +1103,7 @@ class LitterCard extends HTMLElement {
         <!-- Main Image Visual with Dynamic Overlays -->
         <div class="image-container">
           <img class="litter-img" src="${escapeHtml(imgSrc)}" alt="${escapeHtml(cardTitle)}" />
+          ${isLeveling ? `<div class="drum-clip"><img class="drum-spin" src="${escapeHtml(imgSrc)}" alt="" /></div>` : ''}
 
           <!-- Entrance Light / Occupancy Indicator -->
           <div class="entrance-glow ${isOffline ? 'offline' : ''}">

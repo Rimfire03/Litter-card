@@ -15,6 +15,7 @@ export function getCardStyles({
   litterDateX,
   litterDateY,
   configOpen,
+  drumElapsed = 0,
 }) {
   return `
         :host {
@@ -90,6 +91,35 @@ export function getCardStyles({
           object-fit: contain;
           display: block;
           filter: drop-shadow(0 6px 12px rgba(0,0,0,0.08));
+        }
+
+        /* Leveling: the drum (round shell) rocks right then left for ~10 s.
+           The wrapper clips the part hidden behind the base; the copy of the picture
+           is clipped to the shell circle and rotates around its centre. */
+        .drum-clip {
+          position: absolute;
+          inset: 0;
+          clip-path: inset(0 0 38.5% 0);
+          pointer-events: none;
+        }
+        .drum-spin {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          clip-path: ellipse(40.4% 38.6% at 50.2% 44.2%);
+          transform-origin: 50.2% 44.2%;
+          animation: drum-level 10s ease-in-out infinite;
+          animation-delay: -${drumElapsed}s;
+        }
+        @keyframes drum-level {
+          0%   { transform: rotate(0deg); }
+          20%  { transform: rotate(35deg); }
+          45%  { transform: rotate(-35deg); }
+          65%  { transform: rotate(25deg); }
+          85%  { transform: rotate(-25deg); }
+          100% { transform: rotate(0deg); }
         }
 
         /* Entrance Glow/Overlay based on occupancy */

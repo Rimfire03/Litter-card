@@ -141,6 +141,7 @@ export function getCardStyles({
   litterDateX,
   litterDateY,
   configOpen,
+  drumElapsed = 0,
 }) {
   return `
         :host {
@@ -216,6 +217,35 @@ export function getCardStyles({
           object-fit: contain;
           display: block;
           filter: drop-shadow(0 6px 12px rgba(0,0,0,0.08));
+        }
+
+        /* Leveling: the drum (round shell) rocks right then left for ~10 s.
+           The wrapper clips the part hidden behind the base; the copy of the picture
+           is clipped to the shell circle and rotates around its centre. */
+        .drum-clip {
+          position: absolute;
+          inset: 0;
+          clip-path: inset(0 0 38.5% 0);
+          pointer-events: none;
+        }
+        .drum-spin {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          clip-path: ellipse(40.4% 38.6% at 50.2% 44.2%);
+          transform-origin: 50.2% 44.2%;
+          animation: drum-level 10s ease-in-out infinite;
+          animation-delay: -${drumElapsed}s;
+        }
+        @keyframes drum-level {
+          0%   { transform: rotate(0deg); }
+          20%  { transform: rotate(35deg); }
+          45%  { transform: rotate(-35deg); }
+          65%  { transform: rotate(25deg); }
+          85%  { transform: rotate(-25deg); }
+          100% { transform: rotate(0deg); }
         }
 
         /* Entrance Glow/Overlay based on occupancy */
@@ -863,7 +893,7 @@ export const EDITOR_STYLES = `
 `;
 
 
-const CARD_VERSION = "0.54-dev";
+const CARD_VERSION = "0.55-dev";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -1854,6 +1884,12 @@ class LitterCard extends HTMLElement {
     const blinkLevel = rawStatus === "smoothing" ? "blink" : "";
     const blinkBagChanged = rawStatus === "emptying" ? "blink" : "";
 
+    // Drum animation while leveling; a re-render keeps the phase of the running cycle
+    const isLeveling = rawStatus === "smoothing";
+    if (!isLeveling) this._levelStart = null;
+    else if (!this._levelStart) this._levelStart = Date.now();
+    const drumElapsed = isLeveling ? (((Date.now() - this._levelStart) / 1000) % 10).toFixed(2) : 0;
+
     const cleaningsState = this._getState(this._config.sensor_cleanings_count);
     const visitsState = this._getState(this._config.sensor_total_visits);
     const durationState = this._getState(this._config.sensor_visit_duration);
@@ -1939,6 +1975,7 @@ class LitterCard extends HTMLElement {
         binX, binY, binScale,
         litterDateX, litterDateY,
         configOpen: this._configOpen,
+        drumElapsed,
       })}</style>
 
       <ha-card>
@@ -1957,6 +1994,7 @@ class LitterCard extends HTMLElement {
         <!-- Main Image Visual with Dynamic Overlays -->
         <div class="image-container">
           <img class="litter-img" src="${escapeHtml(imgSrc)}" alt="${escapeHtml(cardTitle)}" />
+          ${isLeveling ? `<div class="drum-clip"><img class="drum-spin" src="${escapeHtml(imgSrc)}" alt="" /></div>` : ''}
 
           <!-- Entrance Light / Occupancy Indicator -->
           <div class="entrance-glow ${isOffline ? 'offline' : ''}">
