@@ -2,7 +2,7 @@ import { DEFAULT_IMAGE, MODEL_IMAGES } from './image-data.js';
 import { LITTER_MODELS, DEFAULT_MODEL_ID, getModelConfig } from './models/index.js';
 import { getCardStyles, EDITOR_STYLES } from './styles.js';
 
-const CARD_VERSION = "0.59-dev";
+const CARD_VERSION = "0.60-dev";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -410,6 +410,9 @@ const LITTER_DATE_STORE_KEY = "litter_card_litter_changed";
 const BAG_STORE_KEY = "litter_card_bag";
 const BAG_MAX_THRESHOLD = 50;
 const BAG_DEFAULT_THRESHOLD = 30;
+// Bag replacement animation (seconds): rotation 20deg at the leveling speed (~3.8deg/s), hatch, 1 min hold
+const BAG_ANIM = { rot: 5.3, hatch: 3, hold: 60 };
+const BAG_ANIM_TOTAL = 2 * BAG_ANIM.rot + 2 * BAG_ANIM.hatch + BAG_ANIM.hold;
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (c) => ({
@@ -614,7 +617,20 @@ class LitterCard extends HTMLElement {
   // Simulation is never kept: leaving the page (card removed from the DOM) cancels it.
   // A page reload creates a fresh card, which starts with the simulation off.
   disconnectedCallback() {
+    clearTimeout(this._bagAnimTimer);
+    this._bagAnimStart = null;
     if (this._sim) this._setSim(false);
+  }
+
+  // Bag replacement animation: started by the "Replace bag" button (the device reports no status for it)
+  _startBagAnim() {
+    clearTimeout(this._bagAnimTimer);
+    this._bagAnimStart = Date.now();
+    this._bagAnimTimer = setTimeout(() => {
+      this._bagAnimStart = null;
+      this._render();
+    }, BAG_ANIM_TOTAL * 1000);
+    this._render();
   }
 
   set hass(hass) {
@@ -982,7 +998,7 @@ class LitterCard extends HTMLElement {
         if (c.sensor_cleanings_count && count !== null) this._simSetState(c.sensor_cleanings_count, count + 1);
       });
     } else if (entityId === c.btn_bag_replace) {
-      this._simSetStatus("emptying", 15);
+      this._startBagAnim();
     } else if (entityId === c.btn_bag_changed) {
       if (c.sensor_cleanings_count) this._simSetState(c.sensor_cleanings_count, 0);
       this._simLitterAt = new Date().toISOString();
@@ -1120,6 +1136,9 @@ class LitterCard extends HTMLElement {
     if (!isLeveling) this._levelStart = null;
     else if (!this._levelStart) this._levelStart = Date.now();
     const drumElapsed = isLeveling ? Math.min((Date.now() - this._levelStart) / 1000, 37).toFixed(2) : 0;
+    const bagElapsedMs = this._bagAnimStart ? Date.now() - this._bagAnimStart : -1;
+    const isBagAnim = bagElapsedMs >= 0 && bagElapsedMs < BAG_ANIM_TOTAL * 1000;
+    const bagElapsed = isBagAnim ? (bagElapsedMs / 1000).toFixed(2) : 0;
     const isDevBuild = CARD_VERSION.includes("-dev");
 
     const cleaningsState = this._getState(this._config.sensor_cleanings_count);
@@ -1208,6 +1227,8 @@ class LitterCard extends HTMLElement {
         litterDateX, litterDateY,
         configOpen: this._configOpen,
         drumElapsed,
+        bagAnim: BAG_ANIM,
+        bagElapsed,
       })}</style>
 
       <ha-card>
@@ -1226,7 +1247,7 @@ class LitterCard extends HTMLElement {
         <!-- Main Image Visual with Dynamic Overlays -->
         <div class="image-container">
           <img class="litter-img" src="${escapeHtml(imgSrc)}" alt="${escapeHtml(cardTitle)}" />
-          ${isLeveling ? `<div class="drum-clip"><div class="drum-spin"><img class="drum-img" src="${escapeHtml(imgSrc)}" alt="" /></div></div>` : ''}
+          ${isBagAnim ? `<div class="drum-clip"><div class="drum-spin bag"><img class="drum-img" src="${escapeHtml(imgSrc)}" alt="" /><div class="hatch-hole"></div><div class="hatch-door"><img class="drum-img" src="${escapeHtml(imgSrc)}" alt="" /></div></div></div>` : (isLeveling ? `<div class="drum-clip"><div class="drum-spin"><img class="drum-img" src="${escapeHtml(imgSrc)}" alt="" /></div></div>` : '')}
 
           <!-- Entrance Light / Occupancy Indicator -->
           <div class="entrance-glow ${isOffline ? 'offline' : ''}">
@@ -1547,6 +1568,7 @@ class LitterCard extends HTMLElement {
         el.addEventListener("click", () => {
           this._pressButton(this._config[key]);
           if (key === "btn_bag_changed" && !this._sim) this._markLitterChanged();
+          if (key === "btn_bag_replace" && !this._sim) this._startBagAnim();
         });
       }
     });

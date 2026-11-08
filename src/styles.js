@@ -1,3 +1,12 @@
+// Left-top hatch panel of the shell, in picture pixels (1225 x 1285): along the top seam,
+// the shell outline, the curved left seam, then the entrance ring back up to the top seam.
+const HATCH_POINTS = [
+  [611, 92], [484, 107], [361, 158], [256, 239], [175, 344], [124, 466],
+  [150, 485], [200, 510], [255, 525], [300, 515], [328, 487],
+  [345, 455], [400, 375], [450, 336], [500, 314], [550, 301], [611, 295],
+];
+const HATCH_POLYGON = `polygon(${HATCH_POINTS.map(([x, y]) => `${((x / 1225) * 100).toFixed(2)}% ${((y / 1285) * 100).toFixed(2)}%`).join(", ")})`;
+
 export function getCardStyles({
   isOccupied,
   isBinFull,
@@ -16,7 +25,16 @@ export function getCardStyles({
   litterDateY,
   configOpen,
   drumElapsed = 0,
+  bagAnim = { rot: 5.3, hatch: 3, hold: 60 },
+  bagElapsed = 0,
 }) {
+  // Bag replacement timeline (seconds): rotate, open hatch, hold, close hatch, rotate back
+  const bagTotal = 2 * bagAnim.rot + 2 * bagAnim.hatch + bagAnim.hold;
+  const pc = (s) => ((s / bagTotal) * 100).toFixed(2);
+  const bp1 = pc(bagAnim.rot);
+  const bp2 = pc(bagAnim.rot + bagAnim.hatch);
+  const bp3 = pc(bagAnim.rot + bagAnim.hatch + bagAnim.hold);
+  const bp4 = pc(bagAnim.rot + 2 * bagAnim.hatch + bagAnim.hold);
   return `
         :host {
           display: block;
@@ -107,10 +125,47 @@ export function getCardStyles({
           position: absolute;
           inset: 0;
           background: linear-gradient(to bottom, #f7f7f7 0%, #e6e6e6 45%, #d6d6d6 100%);
-          clip-path: ellipse(40.4% 38.6% at 50.2% 44.2%);
-          transform-origin: 50.2% 44.2%;
+          clip-path: ellipse(40.6% 38.8% at 50.2% 46.5%);
+          transform-origin: 50.2% 46.5%;
           animation: drum-level 37s ease-in-out 1 forwards;
           animation-delay: -${drumElapsed}s;
+        }
+        /* Bag replacement: drum turns 20deg counter-clockwise (same speed as leveling,
+           about 3.8deg/s), left-top hatch tilts open, holds 60 s, then everything returns. */
+        .drum-spin.bag {
+          perspective: 1200px;
+          animation: bag-spin ${bagTotal}s ease-in-out 1 forwards;
+          animation-delay: -${bagElapsed}s;
+        }
+        .hatch-hole {
+          position: absolute;
+          inset: 0;
+          clip-path: ${HATCH_POLYGON};
+          background: radial-gradient(ellipse at 60% 70%, #55555a 0%, #2c2c30 60%, #1b1b1e 100%);
+        }
+        .hatch-door {
+          position: absolute;
+          inset: 0;
+          transform-origin: 10% 30%;
+          animation: bag-hatch ${bagTotal}s ease-in-out 1 forwards;
+          animation-delay: -${bagElapsed}s;
+        }
+        .hatch-door .drum-img {
+          clip-path: ${HATCH_POLYGON};
+        }
+        @keyframes bag-spin {
+          0%        { transform: rotate(0deg); }
+          ${bp1}%   { transform: rotate(-20deg); }
+          ${bp4}%   { transform: rotate(-20deg); }
+          100%      { transform: rotate(0deg); }
+        }
+        @keyframes bag-hatch {
+          0%        { transform: rotateY(0deg); }
+          ${bp1}%   { transform: rotateY(0deg); }
+          ${bp2}%   { transform: rotateY(-62deg); }
+          ${bp3}%   { transform: rotateY(-62deg); }
+          ${bp4}%   { transform: rotateY(0deg); }
+          100%      { transform: rotateY(0deg); }
         }
         .drum-img {
           width: 100%;
