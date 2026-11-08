@@ -45,6 +45,9 @@ fs.writeFileSync(path.join(srcDir, 'image-data.js'), imageDataJsContent, 'utf8')
 
 // 2. Compute dynamic version x.yy based on git commit count and branch
 function getVersion() {
+  // Release CI checks out a tag (detached HEAD, so no branch name): use the tag itself, e.g. v0.59-dev -> 0.59-dev
+  const tag = process.env.GITHUB_REF_TYPE === 'tag' ? process.env.GITHUB_REF_NAME : '';
+  if (/^v\d/.test(tag)) return tag.slice(1);
   try {
     const countStr = execSync('git rev-list --count HEAD', { encoding: 'utf8' }).trim();
     let branch = '';
