@@ -1034,7 +1034,7 @@ export const EDITOR_STYLES = `
 `;
 
 
-const CARD_VERSION = "0.62-dev";
+const CARD_VERSION = "0.63-dev";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -1123,6 +1123,7 @@ const TRANSLATIONS = {
     opt_cat_weight: "Poids de référence du chat",
     opt_cat_history_days: "Période de l'historique du poids",
     opt_cat_show_axes: "Afficher les axes du graphique",
+    opt_animations: "Animations de la litière",
     option_yes: "Oui",
     option_no: "Non",
     unit_days: "jours",
@@ -1220,6 +1221,7 @@ const TRANSLATIONS = {
     opt_cat_weight: "Cat reference weight",
     opt_cat_history_days: "Weight history period",
     opt_cat_show_axes: "Show chart axes",
+    opt_animations: "Litter box animations",
     option_yes: "Yes",
     option_no: "No",
     unit_days: "days",
@@ -1309,6 +1311,7 @@ const TRANSLATIONS = {
     opt_cat_weight: "Referenzgewicht der Katze",
     opt_cat_history_days: "Zeitraum des Gewichtsverlaufs",
     opt_cat_show_axes: "Diagrammachsen anzeigen",
+    opt_animations: "Animationen der Katzentoilette",
     option_yes: "Ja",
     option_no: "Nein",
     unit_days: "Tage",
@@ -1398,6 +1401,7 @@ const TRANSLATIONS = {
     opt_cat_weight: "Peso de referencia del gato",
     opt_cat_history_days: "Período del historial de peso",
     opt_cat_show_axes: "Mostrar los ejes del gráfico",
+    opt_animations: "Animaciones del arenero",
     option_yes: "Sí",
     option_no: "No",
     unit_days: "días",
@@ -2207,21 +2211,23 @@ class LitterCard extends HTMLElement {
     const blinkBagChanged = rawStatus === "emptying" ? "blink" : "";
 
     // Cleaning / emptying status turning on starts its drum sequence (rising edge only)
+    // Animations are on by default; `animations: off` in the card config turns them all off
+    const animOn = this._config.animations !== "off" && this._config.animations !== false;
     const seqStatus = rawStatus === "cleaning" ? "clean" : (rawStatus === "emptying" ? "empty" : null);
-    if (seqStatus && this._prevSeqStatus !== seqStatus && !this._seq) this._beginSeq(seqStatus);
+    if (animOn && seqStatus && this._prevSeqStatus !== seqStatus && !this._seq) this._beginSeq(seqStatus);
     this._prevSeqStatus = seqStatus;
     const seqElapsedMs = this._seq ? Date.now() - this._seq.start : -1;
-    const activeSeq = this._seq && seqElapsedMs >= 0 && seqElapsedMs < SEQ_BUILT[this._seq.name].total * 1000 ? this._seq.name : null;
+    const activeSeq = animOn && this._seq && seqElapsedMs >= 0 && seqElapsedMs < SEQ_BUILT[this._seq.name].total * 1000 ? this._seq.name : null;
     const seqElapsed = activeSeq ? (seqElapsedMs / 1000).toFixed(2) : 0;
 
     // Drum animation while leveling: one rocking; a re-render keeps its phase.
     // (the cleaning sequence already ends with the leveling rocking, so it takes over)
-    const isLeveling = rawStatus === "smoothing" && !activeSeq;
+    const isLeveling = animOn && rawStatus === "smoothing" && !activeSeq;
     if (!isLeveling) this._levelStart = null;
     else if (!this._levelStart) this._levelStart = Date.now();
     const drumElapsed = isLeveling ? Math.min((Date.now() - this._levelStart) / 1000, 37).toFixed(2) : 0;
     const bagElapsedMs = this._bagAnimStart ? Date.now() - this._bagAnimStart : -1;
-    const isBagAnim = bagElapsedMs >= 0 && bagElapsedMs < BAG_ANIM_TOTAL * 1000;
+    const isBagAnim = animOn && bagElapsedMs >= 0 && bagElapsedMs < BAG_ANIM_TOTAL * 1000;
     const bagElapsed = isBagAnim ? (bagElapsedMs / 1000).toFixed(2) : 0;
     const isDevBuild = CARD_VERSION.includes("-dev");
 
@@ -2847,6 +2853,16 @@ class LitterCardEditor extends HTMLElement {
       },
       // Display custom Image URL field ONLY if generic/custom model is chosen
       ...(currentModelId === "generic" ? [{ key: "image", label: t("image_url", lang), type: "text" }] : []),
+      {
+        key: "animations",
+        label: t("opt_animations", lang),
+        type: "select_options",
+        default: "on",
+        options: [
+          { value: "on", label: t("option_yes", lang) },
+          { value: "off", label: t("option_no", lang) },
+        ],
+      },
       // Buttons
       ...(activeButtons.length > 0 ? [{ header: t("sec_controls", lang) }, ...activeButtons] : []),
       // Sensors

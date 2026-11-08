@@ -168,6 +168,7 @@ cfg_unit: select.cat_litter_box_unit
 | `cat_count` | Number (1-6) | Number of cats in the house. Enables per-cat weight tracking (needs `sensor_cat_weight`) |
 | `cat_history_days` | Number | Period of the weight history graph and of the history fetched from the sensor, in days: `7`, `14`, `30` (default), `90` or `180`. It cannot go further back than what Home Assistant keeps for the sensor (10 days by default) or than what the card has already recorded |
 | `cat_show_axes` | String | `on` (default) shows the axes of each cat's weight graph (highest and lowest weight on the left, first and last date below, dotted guide lines); `off` shows the bare curve |
+| `animations` | String | `on` (default) animates the drum of the litter box picture: leveling, cleaning, litter change and bag replacement. `off` turns every animation off |
 | `cat_name_1` ... `cat_name_6` | String | Name of each cat (from the lightest to the heaviest when no reference weights are set) |
 | `cat_weight_1` ... `cat_weight_6` | Number | Reference weight of each cat: a decimal number with a dot, in the unit of the weight sensor (for example `4.2`). When set for every cat, each weigh-in goes to the nearest reference, whatever the order of the names. The references then follow the cats' weight over time on their own; a weigh-in too far from every reference (a visitor) is ignored |
 
