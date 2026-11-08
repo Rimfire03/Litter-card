@@ -42,7 +42,7 @@ If you find this card helpful, consider buying me a coffee to support the develo
   - Embedded clean vector/image representation of the automatic litter box.
   - **Entrance Halo & Indicator**: glows **green** when the litter box is free and **red** with a pulsing glow when a cat is inside (`occupancy = on`). It turns **grey** ("Litter box offline") when the status sensor is `unavailable`.
   - **Cat Weight Display**: Live weight value dynamically overlaid in the bottom circular dial.
-  - **Waste Bin Status Alert**: Animated badge in the top right corner when the bag is full.
+  - **Waste Bin Status Alert**: badge computed by the card from `sensor_cleanings_count` (the device counter, which resets to 0 when the bag is changed). It turns to "Bag full" when the counter reaches an alert threshold (1 to 50, default 30) set from the card settings panel. The threshold is stored per Home Assistant user.
 - **Quick Statistics Overview**: Cleanings count, total visit counter, and duration of the last visit.
 - **Manual Control Action Buttons**: Clean, Level litter, Replace bag, Change litter ("Bag changed"), and Restart device.
 - **Status-aware effects**: the Clean, Level and Change litter buttons glow while the device is cleaning, leveling or emptying. When the bag is full, the status badge turns orange and blinks, and so does the Replace bag button. When the status is `unavailable`, the card shows the device as offline (grey halo, red status, no bag badge). Status values are recognised in English and in French (for example `cleaning` / `Nettoyage`, `smoothing` / `Lissage`, `emptying` / `Vidange`, `full` / `Plein`).
@@ -106,7 +106,6 @@ btn_bag_changed: button.cat_litter_box_empty
 # Sensors
 sensor_occupancy: binary_sensor.cat_litter_box_occupation
 sensor_cat_weight: sensor.cat_litter_box_cat_weight
-sensor_bin_full: binary_sensor.cat_litter_box_bin_full
 sensor_status: sensor.cat_litter_box_etat
 sensor_cleanings_count: sensor.cat_litter_box_number_of_cleanings
 sensor_total_visits: sensor.cat_litter_box_total_visits
@@ -120,7 +119,6 @@ cfg_odor_removal: switch.cat_litter_box_odor_removal_after_cleaning
 cfg_child_lock: lock.cat_litter_box_securite_enfant
 cfg_clean_wait_time: number.cat_litter_box_clean_wait_time
 cfg_clean_interval: number.cat_litter_box_clean_interval
-cfg_bin_calibration: number.cat_litter_box_bin_full_calibration
 cfg_litter_type: select.cat_litter_box_litter_type
 cfg_unit: select.cat_litter_box_unit
 ```
@@ -142,7 +140,6 @@ cfg_unit: select.cat_litter_box_unit
 | `btn_bag_changed` | Button entity | Confirms bag replacement |
 | `sensor_occupancy` | Binary sensor | Entrance halo indicator (**Green** when occupied, **Red** when clear) |
 | `sensor_cat_weight` | Sensor | Cat weight value displayed in the lower circular gauge |
-| `sensor_bin_full` | Binary sensor | Waste bin alert overlay |
 | `sensor_status` | Sensor | Global status badge (*Standby, Cleaning, Sleep...*) |
 | `sensor_cleanings_count` | Sensor | Cleanings counter tile |
 | `sensor_total_visits` | Sensor | Total visits counter tile |
@@ -153,7 +150,6 @@ cfg_unit: select.cat_litter_box_unit
 | `cfg_child_lock` | Lock / Switch | Child lock toggle |
 | `cfg_clean_wait_time` | Number entity | Delay before cleaning (minutes) |
 | `cfg_clean_interval` | Number entity | Cleaning interval (minutes) |
-| `cfg_bin_calibration` | Number entity | Full bin calibration threshold (cycles) |
 | `cfg_litter_type` | Select entity | Litter type selector (e.g. Mineral, Mixed) |
 | `cfg_unit` | Select entity | Weight unit selector (kg / lb) |
 | `entrance_pos_x` | Number (%) | Custom X position of the entrance halo (default: 50) |
@@ -251,7 +247,6 @@ btn_bag_changed: button.cat_litter_box_empty
 # Capteurs
 sensor_occupancy: binary_sensor.cat_litter_box_occupation
 sensor_cat_weight: sensor.cat_litter_box_cat_weight
-sensor_bin_full: binary_sensor.cat_litter_box_bin_full
 sensor_status: sensor.cat_litter_box_etat
 sensor_cleanings_count: sensor.cat_litter_box_number_of_cleanings
 sensor_total_visits: sensor.cat_litter_box_total_visits
@@ -265,7 +260,6 @@ cfg_odor_removal: switch.cat_litter_box_odor_removal_after_cleaning
 cfg_child_lock: lock.cat_litter_box_securite_enfant
 cfg_clean_wait_time: number.cat_litter_box_clean_wait_time
 cfg_clean_interval: number.cat_litter_box_clean_interval
-cfg_bin_calibration: number.cat_litter_box_bin_full_calibration
 cfg_litter_type: select.cat_litter_box_litter_type
 cfg_unit: select.cat_litter_box_unit
 ```

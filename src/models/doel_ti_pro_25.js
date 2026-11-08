@@ -40,7 +40,6 @@ export default {
     sensors: [
       "sensor_occupancy",
       "sensor_cat_weight",
-      "sensor_bin_full",
       "sensor_status",
       "sensor_problem",
       "sensor_cleanings_count",
@@ -53,7 +52,6 @@ export default {
       "cfg_child_lock",
       "cfg_clean_wait_time",
       "cfg_clean_interval",
-      "cfg_bin_calibration",
       "cfg_litter_type",
       "cfg_unit",
     ],

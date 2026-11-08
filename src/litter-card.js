@@ -2,7 +2,7 @@ import { DEFAULT_IMAGE, MODEL_IMAGES } from './image-data.js';
 import { LITTER_MODELS, DEFAULT_MODEL_ID, getModelConfig } from './models/index.js';
 import { getCardStyles, EDITOR_STYLES } from './styles.js';
 
-const CARD_VERSION = "0.52";
+const CARD_VERSION = "0.54-dev";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -390,6 +390,10 @@ function tDomain(domain, hass) {
 }
 
 const LITTER_DATE_STORE_KEY = "litter_card_litter_changed";
+// Bag-full alert computed by the card: {threshold} compared to the device cleanings counter
+const BAG_STORE_KEY = "litter_card_bag";
+const BAG_MAX_THRESHOLD = 50;
+const BAG_DEFAULT_THRESHOLD = 30;
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (c) => ({
@@ -575,6 +579,8 @@ class LitterCard extends HTMLElement {
     this._catSamples = [];
     this._catLoadedFor = null;
     this._catReady = null;
+    this._bag = null;
+    this._bagLoadedFor = null;
   }
 
   setConfig(config) {
@@ -589,6 +595,7 @@ class LitterCard extends HTMLElement {
     const oldHass = this._hass;
     this._hass = hass;
     this._loadLitterDate();
+    this._loadBag();
     this._loadCatSamples();
     this._recordCatSample();
     if (this._hasChanged(oldHass, hass)) {
@@ -743,6 +750,78 @@ class LitterCard extends HTMLElement {
     }
   }
 
+  _cleaningsCount() {
+    const n = parseFloat(this._getState(this._config.sensor_cleanings_count)?.state);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  // Cycles since the bag was last changed: the device counter itself (it resets to 0 on bag change)
+  _bagUsed() {
+    return this._bag ? this._cleaningsCount() : null;
+  }
+
+  _bagThreshold() {
+    const n = Math.floor(Number(this._bag?.threshold));
+    return n >= 1 ? Math.min(n, BAG_MAX_THRESHOLD) : BAG_DEFAULT_THRESHOLD;
+  }
+
+  _isBinFull() {
+    const used = this._bagUsed();
+    return used !== null && used >= this._bagThreshold();
+  }
+
+  async _loadBag() {
+    const id = this._config.sensor_cleanings_count;
+    if (!id || !this._hass) return;
+    let changed = false;
+    if (this._bagLoadedFor !== id) {
+      changed = true;
+      this._bagLoadedFor = id;
+      this._bag = null;
+      let value = null;
+      try {
+        const res = await this._hass.callWS({ type: "frontend/get_user_data", key: BAG_STORE_KEY });
+        value = res?.value?.[id] ?? null;
+      } catch (err) {
+        console.warn("litter-card: cannot read stored bag data", err);
+      }
+      if (!value) {
+        try {
+          value = JSON.parse(localStorage.getItem(`${BAG_STORE_KEY}:${id}`));
+        } catch (err) {}
+      }
+      if (this._config.sensor_cleanings_count !== id) return;
+      this._bag = { threshold: value?.threshold ?? BAG_DEFAULT_THRESHOLD };
+    }
+    if (changed) this._render();
+  }
+
+  async _saveBag() {
+    const id = this._config.sensor_cleanings_count;
+    if (!id || !this._bag) return;
+    const data = { threshold: this._bag.threshold };
+    try {
+      localStorage.setItem(`${BAG_STORE_KEY}:${id}`, JSON.stringify(data));
+    } catch (err) {}
+    try {
+      const res = await this._hass.callWS({ type: "frontend/get_user_data", key: BAG_STORE_KEY });
+      await this._hass.callWS({
+        type: "frontend/set_user_data",
+        key: BAG_STORE_KEY,
+        value: { ...(res?.value || {}), [id]: data },
+      });
+    } catch (err) {
+      console.warn("litter-card: cannot store bag data", err);
+    }
+  }
+
+  _setBagThreshold(value) {
+    if (!this._bag) return;
+    this._bag.threshold = Math.min(Math.max(Math.floor(Number(value)) || 1, 1), BAG_MAX_THRESHOLD);
+    this._saveBag();
+    this._render();
+  }
+
   async _markLitterChanged() {
     const id = this._config.btn_bag_changed;
     if (!id) return;
@@ -778,10 +857,8 @@ class LitterCard extends HTMLElement {
       this._config.sensor_total_visits,
       this._config.sensor_occupancy,
       this._config.sensor_cat_weight,
-      this._config.sensor_bin_full,
       this._config.sensor_status,
       this._config.sensor_problem,
-      this._config.cfg_bin_calibration,
       this._config.cfg_clean_wait_time,
       this._config.cfg_odor_removal,
       this._config.cfg_clean_interval,
@@ -894,8 +971,7 @@ class LitterCard extends HTMLElement {
     const occState = this._getState(this._config.sensor_occupancy);
     const isOccupied = occState && (occState.state === "on" || occState.state === "true" || occState.state === "occupied");
 
-    const binFullState = this._getState(this._config.sensor_bin_full);
-    const isBinFull = binFullState && (binFullState.state === "on" || binFullState.state === "true" || binFullState.state === "full");
+    const isBinFull = this._isBinFull();
 
     const weightState = this._getState(this._config.sensor_cat_weight);
     let weightVal = "--";
@@ -981,7 +1057,7 @@ class LitterCard extends HTMLElement {
     const hasAnyButtons = hasBtnClean || hasBtnLevel || hasBtnRestart || hasBtnBagReplace || hasBtnBagChanged;
 
     // Config presence
-    const hasCfgCalib = Boolean(this._config.cfg_bin_calibration);
+    const hasCfgCalib = Boolean(this._config.sensor_cleanings_count) && this._bag !== null;
     const hasCfgWait = Boolean(this._config.cfg_clean_wait_time);
     const hasCfgOdor = Boolean(this._config.cfg_odor_removal);
     const hasCfgInterval = Boolean(this._config.cfg_clean_interval);
@@ -1030,7 +1106,7 @@ class LitterCard extends HTMLElement {
           </div>
 
           <!-- Bin status overlay -->
-          ${this._config.sensor_bin_full && !isOffline ? `
+          ${this._bag && this._bagUsed() !== null && !isOffline ? `
             <div class="bin-status-overlay">
               <ha-icon icon="${isBinFull ? 'mdi:delete-alert' : 'mdi:delete-outline'}" style="--mdc-icon-size: 16px;"></ha-icon>
               <span>${isBinFull ? t("bin_full_alert", lang) : t("bin_ok", lang)}</span>
@@ -1175,7 +1251,18 @@ class LitterCard extends HTMLElement {
               ${hasCfgInterval ? this._renderSliderRow("cfg_clean_interval", t("cfg_clean_interval", lang), t("unit_min", lang), 0, 120, 5) : ''}
 
               <!-- Calibration sac plein -->
-              ${hasCfgCalib ? this._renderSliderRow("cfg_bin_calibration", t("cfg_bin_calibration", lang), t("unit_cycles", lang), 15, 35, 1) : ''}
+              ${hasCfgCalib ? `
+                <div class="config-row">
+                  <div class="config-label-group">
+                    <span class="config-label">${t("cfg_bin_calibration", lang)}</span>
+                    <span class="config-desc">${this._bagUsed() ?? 0} / ${this._bagThreshold()} ${t("unit_cycles", lang)}</span>
+                  </div>
+                  <div class="slider-group">
+                    <input type="range" id="bag_threshold" min="1" max="${BAG_MAX_THRESHOLD}" step="1" value="${this._bagThreshold()}">
+                    <span class="slider-val">${this._bagThreshold()}</span>
+                  </div>
+                </div>
+              ` : ''}
 
               <!-- Type de litière -->
               ${hasCfgLitterType ? this._renderSelectRow("cfg_litter_type", t("cfg_litter_type", lang)) : ''}
@@ -1302,13 +1389,18 @@ class LitterCard extends HTMLElement {
     });
 
     // Slider inputs
-    const sliders = ["cfg_clean_wait_time", "cfg_clean_interval", "cfg_bin_full_calibration", "cfg_bin_calibration"];
+    const sliders = ["cfg_clean_wait_time", "cfg_clean_interval"];
     sliders.forEach(key => {
       const el = root.getElementById(key);
       if (el) {
         el.addEventListener("change", (e) => this._setNumber(this._config[key], e.target.value));
       }
     });
+
+    const bagSlider = root.getElementById("bag_threshold");
+    if (bagSlider) {
+      bagSlider.addEventListener("change", (e) => this._setBagThreshold(e.target.value));
+    }
 
     // Select options
     const selects = ["cfg_litter_type", "cfg_unit"];
@@ -1429,7 +1521,6 @@ class LitterCardEditor extends HTMLElement {
     const allSensorFields = [
       { key: "sensor_occupancy", label: `${t("cat_present", lang)} / ${t("litter_free", lang)} (Binary Sensor)`, domains: ["binary_sensor", "sensor", "input_boolean"] },
       { key: "sensor_cat_weight", label: `${t("weight_tooltip", lang)} (Sensor)`, domains: ["sensor", "input_number"] },
-      { key: "sensor_bin_full", label: `${t("bin_full_alert", lang)} (Binary Sensor)`, domains: ["binary_sensor", "sensor", "input_boolean"] },
       { key: "sensor_status", label: `${t("status_standby", lang)} / Status (Sensor)`, domains: ["sensor"] },
       { key: "sensor_problem", label: `${t("status_problem", lang)} (Binary Sensor)`, domains: ["binary_sensor", "sensor"] },
       { key: "sensor_cleanings_count", label: `${t("stat_cleanings", lang)} (Sensor)`, domains: ["sensor", "input_number", "counter"] },
@@ -1443,7 +1534,6 @@ class LitterCardEditor extends HTMLElement {
       { key: "cfg_child_lock", label: `${t("cfg_child_lock", lang)} (Lock / Switch)`, domains: ["lock", "switch", "input_boolean"] },
       { key: "cfg_clean_wait_time", label: `${t("cfg_clean_wait_time", lang)} (Number)`, domains: ["number", "input_number", "sensor"] },
       { key: "cfg_clean_interval", label: `${t("cfg_clean_interval", lang)} (Number)`, domains: ["number", "input_number", "sensor"] },
-      { key: "cfg_bin_calibration", label: `${t("cfg_bin_calibration", lang)} (Number)`, domains: ["number", "input_number", "sensor"] },
       { key: "cfg_litter_type", label: `${t("cfg_litter_type", lang)} (Select)`, domains: ["select", "input_select"] },
       { key: "cfg_unit", label: `${t("cfg_unit", lang)} (Select)`, domains: ["select", "input_select"] },
     ];
