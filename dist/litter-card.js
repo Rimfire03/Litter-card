@@ -236,7 +236,7 @@ export function getCardStyles({
           object-fit: contain;
           clip-path: ellipse(40.4% 38.6% at 50.2% 44.2%);
           transform-origin: 50.2% 44.2%;
-          animation: drum-level 10s ease-in-out 1 forwards;
+          animation: drum-level 37s ease-in-out 1 forwards;
           animation-delay: -${drumElapsed}s;
         }
         /* one single right-left rocking, then rest until the status changes */
@@ -892,7 +892,7 @@ export const EDITOR_STYLES = `
 `;
 
 
-const CARD_VERSION = "0.56-dev";
+const CARD_VERSION = "0.57-dev";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -1887,7 +1887,7 @@ class LitterCard extends HTMLElement {
     const isLeveling = rawStatus === "smoothing";
     if (!isLeveling) this._levelStart = null;
     else if (!this._levelStart) this._levelStart = Date.now();
-    const drumElapsed = isLeveling ? Math.min((Date.now() - this._levelStart) / 1000, 10).toFixed(2) : 0;
+    const drumElapsed = isLeveling ? Math.min((Date.now() - this._levelStart) / 1000, 37).toFixed(2) : 0;
 
     const cleaningsState = this._getState(this._config.sensor_cleanings_count);
     const visitsState = this._getState(this._config.sensor_total_visits);

@@ -110,7 +110,7 @@ export function getCardStyles({
           object-fit: contain;
           clip-path: ellipse(40.4% 38.6% at 50.2% 44.2%);
           transform-origin: 50.2% 44.2%;
-          animation: drum-level 10s ease-in-out 1 forwards;
+          animation: drum-level 37s ease-in-out 1 forwards;
           animation-delay: -${drumElapsed}s;
         }
         /* one single right-left rocking, then rest until the status changes */
