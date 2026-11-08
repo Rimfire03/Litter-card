@@ -27,7 +27,18 @@ export function getCardStyles({
   drumElapsed = 0,
   bagAnim = { rot: 5.3, hatch: 3, hold: 60 },
   bagElapsed = 0,
+  seq = null,
+  seqElapsed = 0,
 }) {
+  // Drum rotation sequence (cleaning / litter change): {total, stops: [[seconds, angle], ...]}
+  const seqCss = seq ? `
+        .drum-spin.seq {
+          animation: drum-seq ${seq.total.toFixed(2)}s ease-in-out 1 forwards;
+          animation-delay: -${seqElapsed}s;
+        }
+        @keyframes drum-seq {
+          ${seq.stops.map(([t, a]) => `${((t / seq.total) * 100).toFixed(3)}% { transform: rotate(${a}deg); }`).join("\n          ")}
+        }` : "";
   // Bag replacement timeline (seconds): rotate, open hatch, hold, close hatch, rotate back
   const bagTotal = 2 * bagAnim.rot + 2 * bagAnim.hatch + bagAnim.hold;
   const pc = (s) => ((s / bagTotal) * 100).toFixed(2);
@@ -118,7 +129,8 @@ export function getCardStyles({
         .drum-clip {
           position: absolute;
           inset: 0;
-          clip-path: inset(0 0 34.2% 0);
+          /* only the bottom is cut (base line); negative insets let the open hatch go beyond the picture */
+          clip-path: inset(-60% -60% 34.2% -60%);
           pointer-events: none;
         }
         .drum-spin {
@@ -130,6 +142,7 @@ export function getCardStyles({
           animation: drum-level 37s ease-in-out 1 forwards;
           animation-delay: -${drumElapsed}s;
         }
+        ${seqCss}
         /* Bag replacement: drum turns 20deg counter-clockwise (same speed as leveling,
            about 3.8deg/s), left-top hatch tilts open, holds 60 s, then everything returns. */
         .bag-rot {
@@ -173,8 +186,8 @@ export function getCardStyles({
         @keyframes bag-hatch {
           0%        { transform: none; filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
           ${bp1}%   { transform: none; filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
-          ${bp2}%   { transform: rotate(-80deg) scale(0.5); filter: drop-shadow(-3px 3px 4px rgba(0,0,0,0.45)); }
-          ${bp3}%   { transform: rotate(-80deg) scale(0.5); filter: drop-shadow(-3px 3px 4px rgba(0,0,0,0.45)); }
+          ${bp2}%   { transform: rotate(-70deg); filter: drop-shadow(-3px 3px 4px rgba(0,0,0,0.45)); }
+          ${bp3}%   { transform: rotate(-70deg); filter: drop-shadow(-3px 3px 4px rgba(0,0,0,0.45)); }
           ${bp4}%   { transform: none; filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
           100%      { transform: none; filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
         }

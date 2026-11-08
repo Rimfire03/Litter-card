@@ -153,7 +153,18 @@ export function getCardStyles({
   drumElapsed = 0,
   bagAnim = { rot: 5.3, hatch: 3, hold: 60 },
   bagElapsed = 0,
+  seq = null,
+  seqElapsed = 0,
 }) {
+  // Drum rotation sequence (cleaning / litter change): {total, stops: [[seconds, angle], ...]}
+  const seqCss = seq ? `
+        .drum-spin.seq {
+          animation: drum-seq ${seq.total.toFixed(2)}s ease-in-out 1 forwards;
+          animation-delay: -${seqElapsed}s;
+        }
+        @keyframes drum-seq {
+          ${seq.stops.map(([t, a]) => `${((t / seq.total) * 100).toFixed(3)}% { transform: rotate(${a}deg); }`).join("\n          ")}
+        }` : "";
   // Bag replacement timeline (seconds): rotate, open hatch, hold, close hatch, rotate back
   const bagTotal = 2 * bagAnim.rot + 2 * bagAnim.hatch + bagAnim.hold;
   const pc = (s) => ((s / bagTotal) * 100).toFixed(2);
@@ -244,7 +255,8 @@ export function getCardStyles({
         .drum-clip {
           position: absolute;
           inset: 0;
-          clip-path: inset(0 0 34.2% 0);
+          /* only the bottom is cut (base line); negative insets let the open hatch go beyond the picture */
+          clip-path: inset(-60% -60% 34.2% -60%);
           pointer-events: none;
         }
         .drum-spin {
@@ -256,6 +268,7 @@ export function getCardStyles({
           animation: drum-level 37s ease-in-out 1 forwards;
           animation-delay: -${drumElapsed}s;
         }
+        ${seqCss}
         /* Bag replacement: drum turns 20deg counter-clockwise (same speed as leveling,
            about 3.8deg/s), left-top hatch tilts open, holds 60 s, then everything returns. */
         .bag-rot {
@@ -299,8 +312,8 @@ export function getCardStyles({
         @keyframes bag-hatch {
           0%        { transform: none; filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
           ${bp1}%   { transform: none; filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
-          ${bp2}%   { transform: rotate(-80deg) scale(0.5); filter: drop-shadow(-3px 3px 4px rgba(0,0,0,0.45)); }
-          ${bp3}%   { transform: rotate(-80deg) scale(0.5); filter: drop-shadow(-3px 3px 4px rgba(0,0,0,0.45)); }
+          ${bp2}%   { transform: rotate(-70deg); filter: drop-shadow(-3px 3px 4px rgba(0,0,0,0.45)); }
+          ${bp3}%   { transform: rotate(-70deg); filter: drop-shadow(-3px 3px 4px rgba(0,0,0,0.45)); }
           ${bp4}%   { transform: none; filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
           100%      { transform: none; filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
         }
@@ -1021,7 +1034,7 @@ export const EDITOR_STYLES = `
 `;
 
 
-const CARD_VERSION = "0.61-dev";
+const CARD_VERSION = "0.62-dev";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -1433,6 +1446,26 @@ const BAG_DEFAULT_THRESHOLD = 30;
 const BAG_ANIM = { rot: 5.3, hatch: 3, hold: 60 };
 const BAG_ANIM_TOTAL = 2 * BAG_ANIM.rot + 2 * BAG_ANIM.hatch + BAG_ANIM.hold;
 
+// Drum rotation sequences. Speed deduced from leveling: 140deg of travel in 37 s (~3.78deg/s).
+// A sequence is a list of angles (deg); each leg lasts |delta| / speed seconds.
+const DRUM_SPEED = 140 / 37;
+const LEVEL_ANGLES = [0, 35, -35, 0];
+const DRUM_SEQUENCES = {
+  // cleaning: clockwise like leveling, counter-clockwise to -180, back to 0, then the leveling rocking
+  clean: [0, 35, -180, 0, 35, -35, 0],
+  // litter change (emptying): one full clockwise turn
+  empty: [0, 360],
+};
+function buildSequence(angles) {
+  let t = 0;
+  const stops = angles.map((a, i) => {
+    if (i > 0) t += Math.abs(a - angles[i - 1]) / DRUM_SPEED;
+    return [t, a];
+  });
+  return { total: t, stops };
+}
+const SEQ_BUILT = Object.fromEntries(Object.entries(DRUM_SEQUENCES).map(([k, v]) => [k, buildSequence(v)]));
+
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (c) => ({
     "&": "&amp;",
@@ -1638,7 +1671,25 @@ class LitterCard extends HTMLElement {
   disconnectedCallback() {
     clearTimeout(this._bagAnimTimer);
     this._bagAnimStart = null;
+    clearTimeout(this._seqTimer);
+    this._seq = null;
     if (this._sim) this._setSim(false);
+  }
+
+  // Cleaning / litter change drum sequences. Started by the matching button or when the device
+  // status turns to cleaning / emptying. _beginSeq does not render (it is also called from render).
+  _beginSeq(name) {
+    clearTimeout(this._seqTimer);
+    this._seq = { name, start: Date.now() };
+    this._seqTimer = setTimeout(() => {
+      this._seq = null;
+      this._render();
+    }, SEQ_BUILT[name].total * 1000);
+  }
+
+  _startSeq(name) {
+    this._beginSeq(name);
+    this._render();
   }
 
   // Bag replacement animation: started by the "Replace bag" button (the device reports no status for it)
@@ -1962,6 +2013,10 @@ class LitterCard extends HTMLElement {
     this._simStatus = null;
     this._simLitterAt = null;
     clearTimeout(this._simTimer);
+    clearTimeout(this._seqTimer);
+    clearTimeout(this._bagAnimTimer);
+    this._seq = null;
+    this._bagAnimStart = null;
     this._render();
   }
 
@@ -2016,12 +2071,13 @@ class LitterCard extends HTMLElement {
       this._simSetStatus("cleaning", 20, () => {
         if (c.sensor_cleanings_count && count !== null) this._simSetState(c.sensor_cleanings_count, count + 1);
       });
+      this._startSeq("clean");
     } else if (entityId === c.btn_bag_replace) {
       this._startBagAnim();
     } else if (entityId === c.btn_bag_changed) {
       if (c.sensor_cleanings_count) this._simSetState(c.sensor_cleanings_count, 0);
       this._simLitterAt = new Date().toISOString();
-      this._render();
+      this._startSeq("empty");
     } else if (entityId === c.btn_restart) {
       this._simSetStatus("unavailable", 5);
     }
@@ -2150,8 +2206,17 @@ class LitterCard extends HTMLElement {
     const blinkLevel = rawStatus === "smoothing" ? "blink" : "";
     const blinkBagChanged = rawStatus === "emptying" ? "blink" : "";
 
-    // Drum animation while leveling: one rocking; a re-render keeps its phase
-    const isLeveling = rawStatus === "smoothing";
+    // Cleaning / emptying status turning on starts its drum sequence (rising edge only)
+    const seqStatus = rawStatus === "cleaning" ? "clean" : (rawStatus === "emptying" ? "empty" : null);
+    if (seqStatus && this._prevSeqStatus !== seqStatus && !this._seq) this._beginSeq(seqStatus);
+    this._prevSeqStatus = seqStatus;
+    const seqElapsedMs = this._seq ? Date.now() - this._seq.start : -1;
+    const activeSeq = this._seq && seqElapsedMs >= 0 && seqElapsedMs < SEQ_BUILT[this._seq.name].total * 1000 ? this._seq.name : null;
+    const seqElapsed = activeSeq ? (seqElapsedMs / 1000).toFixed(2) : 0;
+
+    // Drum animation while leveling: one rocking; a re-render keeps its phase.
+    // (the cleaning sequence already ends with the leveling rocking, so it takes over)
+    const isLeveling = rawStatus === "smoothing" && !activeSeq;
     if (!isLeveling) this._levelStart = null;
     else if (!this._levelStart) this._levelStart = Date.now();
     const drumElapsed = isLeveling ? Math.min((Date.now() - this._levelStart) / 1000, 37).toFixed(2) : 0;
@@ -2248,6 +2313,8 @@ class LitterCard extends HTMLElement {
         drumElapsed,
         bagAnim: BAG_ANIM,
         bagElapsed,
+        seq: activeSeq ? SEQ_BUILT[activeSeq] : null,
+        seqElapsed,
       })}</style>
 
       <ha-card>
@@ -2266,7 +2333,7 @@ class LitterCard extends HTMLElement {
         <!-- Main Image Visual with Dynamic Overlays -->
         <div class="image-container">
           <img class="litter-img" src="${escapeHtml(imgSrc)}" alt="${escapeHtml(cardTitle)}" />
-          ${isBagAnim ? `<div class="drum-clip"><div class="bag-rot"><div class="bag-disc"><img class="drum-img" src="${escapeHtml(imgSrc)}" alt="" /><div class="hatch-hole"></div></div><div class="hatch-door"><img class="drum-img" src="${escapeHtml(imgSrc)}" alt="" /></div></div></div>` : (isLeveling ? `<div class="drum-clip"><div class="drum-spin"><img class="drum-img" src="${escapeHtml(imgSrc)}" alt="" /></div></div>` : '')}
+          ${isBagAnim ? `<div class="drum-clip"><div class="bag-rot"><div class="bag-disc"><img class="drum-img" src="${escapeHtml(imgSrc)}" alt="" /><div class="hatch-hole"></div></div><div class="hatch-door"><img class="drum-img" src="${escapeHtml(imgSrc)}" alt="" /></div></div></div>` : ((isLeveling || activeSeq) ? `<div class="drum-clip"><div class="drum-spin ${activeSeq ? 'seq' : ''}"><img class="drum-img" src="${escapeHtml(imgSrc)}" alt="" /></div></div>` : '')}
 
           <!-- Entrance Light / Occupancy Indicator -->
           <div class="entrance-glow ${isOffline ? 'offline' : ''}">
@@ -2588,6 +2655,8 @@ class LitterCard extends HTMLElement {
           this._pressButton(this._config[key]);
           if (key === "btn_bag_changed" && !this._sim) this._markLitterChanged();
           if (key === "btn_bag_replace" && !this._sim) this._startBagAnim();
+          if (key === "btn_clean" && !this._sim) this._startSeq("clean");
+          if (key === "btn_bag_changed" && !this._sim) this._startSeq("empty");
         });
       }
     });
