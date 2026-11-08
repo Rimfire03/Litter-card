@@ -93,9 +93,10 @@ export function getCardStyles({
           filter: drop-shadow(0 6px 12px rgba(0,0,0,0.08));
         }
 
-        /* Leveling: the drum (round shell) rocks right then left for ~10 s.
-           The wrapper clips the part hidden behind the base; the copy of the picture
-           is clipped to the shell circle and rotates around its centre. */
+        /* Leveling: the drum (round shell) rocks right then left over 37 s.
+           The wrapper clips the part hidden behind the base. The rotating disc is the
+           shell circle: a white shell gradient, with the picture on top masked above the
+           base line so the base never rotates into view (the hidden part stays shell-white). */
         .drum-clip {
           position: absolute;
           inset: 0;
@@ -105,13 +106,19 @@ export function getCardStyles({
         .drum-spin {
           position: absolute;
           inset: 0;
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
+          background: linear-gradient(to bottom, #f7f7f7 0%, #e6e6e6 45%, #d6d6d6 100%);
           clip-path: ellipse(40.4% 38.6% at 50.2% 44.2%);
           transform-origin: 50.2% 44.2%;
           animation: drum-level 37s ease-in-out 1 forwards;
           animation-delay: -${drumElapsed}s;
+        }
+        .drum-img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          display: block;
+          -webkit-mask-image: linear-gradient(to bottom, #000 65.8%, transparent 65.8%);
+          mask-image: linear-gradient(to bottom, #000 65.8%, transparent 65.8%);
         }
         /* one single right-left rocking, then rest until the status changes */
         @keyframes drum-level {
@@ -119,6 +126,62 @@ export function getCardStyles({
           25%  { transform: rotate(35deg); }
           75%  { transform: rotate(-35deg); }
           100% { transform: rotate(0deg); }
+        }
+
+        /* Dev builds: animation test buttons */
+        .dev-tools {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 8px;
+          margin: 0 0 16px 0;
+          padding: 8px 12px;
+          border: 1px dashed var(--divider-color, rgba(128,128,128,0.4));
+          border-radius: 12px;
+        }
+        .dev-tools-title {
+          font-size: 0.75rem;
+          color: var(--secondary-text-color, #727272);
+          flex: 1 1 100%;
+        }
+        .dev-tools-btn {
+          padding: 6px 14px;
+          border-radius: 16px;
+          border: 1px solid var(--primary-color, #03a9f4);
+          background: transparent;
+          color: var(--primary-color, #03a9f4);
+          font-size: 0.8rem;
+          font-weight: 600;
+          cursor: pointer;
+        }
+        .sim-fields {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+          gap: 8px;
+          flex: 1 1 100%;
+        }
+        .sim-field {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          font-size: 0.7rem;
+          color: var(--secondary-text-color, #727272);
+        }
+        .sim-field input[type="number"], .sim-field select {
+          font-size: 0.85rem;
+          padding: 4px 6px;
+          border-radius: 8px;
+          border: 1px solid var(--divider-color, rgba(128,128,128,0.4));
+          background: var(--card-background-color, #fff);
+          color: var(--primary-text-color, #212121);
+        }
+        .dev-tools-btn.on {
+          background: var(--primary-color, #03a9f4);
+          color: var(--text-primary-color, #fff);
+        }
+        .dev-tools-btn:hover {
+          background: var(--primary-color, #03a9f4);
+          color: var(--text-primary-color, #fff);
         }
 
         /* Entrance Glow/Overlay based on occupancy */

@@ -219,9 +219,10 @@ export function getCardStyles({
           filter: drop-shadow(0 6px 12px rgba(0,0,0,0.08));
         }
 
-        /* Leveling: the drum (round shell) rocks right then left for ~10 s.
-           The wrapper clips the part hidden behind the base; the copy of the picture
-           is clipped to the shell circle and rotates around its centre. */
+        /* Leveling: the drum (round shell) rocks right then left over 37 s.
+           The wrapper clips the part hidden behind the base. The rotating disc is the
+           shell circle: a white shell gradient, with the picture on top masked above the
+           base line so the base never rotates into view (the hidden part stays shell-white). */
         .drum-clip {
           position: absolute;
           inset: 0;
@@ -231,13 +232,19 @@ export function getCardStyles({
         .drum-spin {
           position: absolute;
           inset: 0;
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
+          background: linear-gradient(to bottom, #f7f7f7 0%, #e6e6e6 45%, #d6d6d6 100%);
           clip-path: ellipse(40.4% 38.6% at 50.2% 44.2%);
           transform-origin: 50.2% 44.2%;
           animation: drum-level 37s ease-in-out 1 forwards;
           animation-delay: -${drumElapsed}s;
+        }
+        .drum-img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          display: block;
+          -webkit-mask-image: linear-gradient(to bottom, #000 65.8%, transparent 65.8%);
+          mask-image: linear-gradient(to bottom, #000 65.8%, transparent 65.8%);
         }
         /* one single right-left rocking, then rest until the status changes */
         @keyframes drum-level {
@@ -245,6 +252,62 @@ export function getCardStyles({
           25%  { transform: rotate(35deg); }
           75%  { transform: rotate(-35deg); }
           100% { transform: rotate(0deg); }
+        }
+
+        /* Dev builds: animation test buttons */
+        .dev-tools {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 8px;
+          margin: 0 0 16px 0;
+          padding: 8px 12px;
+          border: 1px dashed var(--divider-color, rgba(128,128,128,0.4));
+          border-radius: 12px;
+        }
+        .dev-tools-title {
+          font-size: 0.75rem;
+          color: var(--secondary-text-color, #727272);
+          flex: 1 1 100%;
+        }
+        .dev-tools-btn {
+          padding: 6px 14px;
+          border-radius: 16px;
+          border: 1px solid var(--primary-color, #03a9f4);
+          background: transparent;
+          color: var(--primary-color, #03a9f4);
+          font-size: 0.8rem;
+          font-weight: 600;
+          cursor: pointer;
+        }
+        .sim-fields {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+          gap: 8px;
+          flex: 1 1 100%;
+        }
+        .sim-field {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          font-size: 0.7rem;
+          color: var(--secondary-text-color, #727272);
+        }
+        .sim-field input[type="number"], .sim-field select {
+          font-size: 0.85rem;
+          padding: 4px 6px;
+          border-radius: 8px;
+          border: 1px solid var(--divider-color, rgba(128,128,128,0.4));
+          background: var(--card-background-color, #fff);
+          color: var(--primary-text-color, #212121);
+        }
+        .dev-tools-btn.on {
+          background: var(--primary-color, #03a9f4);
+          color: var(--text-primary-color, #fff);
+        }
+        .dev-tools-btn:hover {
+          background: var(--primary-color, #03a9f4);
+          color: var(--text-primary-color, #fff);
         }
 
         /* Entrance Glow/Overlay based on occupancy */
@@ -892,7 +955,7 @@ export const EDITOR_STYLES = `
 `;
 
 
-const CARD_VERSION = "0.57-dev";
+const CARD_VERSION = "0.58-dev";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -922,6 +985,14 @@ const TRANSLATIONS = {
     status_unavailable: "Indisponible",
     bin_full_alert: "Sac plein !",
     bin_ok: "Sac OK",
+    dev_sim_title: "Version dev : mode simulation disponible",
+    dev_sim_active: "Simulation active : aucune commande n'est envoyée à la litière",
+    dev_sim_status: "Statut",
+    dev_sim_auto: "Automatique",
+    dev_sim_weight: "Poids (kg)",
+    dev_sim_duration: "Durée de visite (s)",
+    dev_sim_start: "Activer la simulation",
+    dev_sim_stop: "Arrêter la simulation",
     weight_tooltip: "Dernier poids mesuré",
     stat_cleanings: "Nettoyages",
     stat_visits: "Visites",
@@ -1011,6 +1082,14 @@ const TRANSLATIONS = {
     status_unavailable: "Unavailable",
     bin_full_alert: "Bag full!",
     bin_ok: "Bag OK",
+    dev_sim_title: "Dev build: simulation mode available",
+    dev_sim_active: "Simulation on: no command is sent to the litter box",
+    dev_sim_status: "Status",
+    dev_sim_auto: "Automatic",
+    dev_sim_weight: "Weight (kg)",
+    dev_sim_duration: "Visit duration (s)",
+    dev_sim_start: "Start simulation",
+    dev_sim_stop: "Stop simulation",
     weight_tooltip: "Last measured weight",
     stat_cleanings: "Cleanings",
     stat_visits: "Visits",
@@ -1471,6 +1550,10 @@ class LitterCard extends HTMLElement {
     this._catReady = null;
     this._bag = null;
     this._bagLoadedFor = null;
+    this._sim = false;
+    this._simStates = {};
+    this._simStatus = null;
+    this._simLitterAt = null;
   }
 
   setConfig(config) {
@@ -1479,6 +1562,12 @@ class LitterCard extends HTMLElement {
     }
     this._config = { ...config };
     this._render();
+  }
+
+  // Simulation is never kept: leaving the page (card removed from the DOM) cancels it.
+  // A page reload creates a fresh card, which starts with the simulation off.
+  disconnectedCallback() {
+    if (this._sim) this._setSim(false);
   }
 
   set hass(hass) {
@@ -1556,7 +1645,7 @@ class LitterCard extends HTMLElement {
 
   _recordCatSample() {
     const id = this._config.sensor_cat_weight;
-    if (!this._catCount() || this._catReady !== id) return;
+    if (this._sim || !this._catCount() || this._catReady !== id) return; // never store simulated weights
     const st = this._getState(id);
     const w = st ? parseFloat(st.state) : NaN;
     const ts = st ? Math.round(new Date(st.last_changed).getTime() / 1000) : 0;
@@ -1708,7 +1797,7 @@ class LitterCard extends HTMLElement {
   _setBagThreshold(value) {
     if (!this._bag) return;
     this._bag.threshold = Math.min(Math.max(Math.floor(Number(value)) || 1, 1), BAG_MAX_THRESHOLD);
-    this._saveBag();
+    if (!this._sim) this._saveBag();
     this._render();
   }
 
@@ -1768,6 +1857,9 @@ class LitterCard extends HTMLElement {
   }
 
   _getState(entityId) {
+    if (this._sim && entityId && this._simStates[entityId]) {
+      return this._simStates[entityId];
+    }
     if (!entityId || !this._hass || !this._hass.states || !this._hass.states[entityId]) {
       return null;
     }
@@ -1775,13 +1867,87 @@ class LitterCard extends HTMLElement {
   }
 
   _callService(domain, service, data) {
+    if (this._sim) return; // simulation: nothing is sent to the device
     if (this._hass) {
       this._hass.callService(domain, service, data);
     }
   }
 
+  // ---- Simulation (dev builds only): actions are played locally, never sent ----
+  _setSim(on) {
+    this._sim = Boolean(on);
+    this._simStates = {};
+    this._simStatus = null;
+    this._simLitterAt = null;
+    clearTimeout(this._simTimer);
+    this._render();
+  }
+
+  _simSetStatus(value, seconds, after) {
+    this._simStatus = value;
+    clearTimeout(this._simTimer);
+    this._simTimer = setTimeout(() => {
+      this._simStatus = null;
+      if (after) after();
+      this._render();
+    }, seconds * 1000);
+    this._render();
+  }
+
+  _simSetState(entityId, state) {
+    const cur = this._getState(entityId);
+    this._simStates[entityId] = { state: String(state), attributes: cur?.attributes || {} };
+  }
+
+  // Simulation panel fields: [config key, element id, label key, input attributes]
+  _simFields() {
+    return [
+      ["sensor_cat_weight", "sim-weight", "dev_sim_weight", 'step="0.01" min="0"'],
+      ["sensor_total_visits", "sim-visits", "stat_visits", 'step="1" min="0"'],
+      ["sensor_visit_duration", "sim-duration", "dev_sim_duration", 'step="1" min="0"'],
+      ["sensor_cleanings_count", "sim-cleanings", "stat_cleanings", 'step="1" min="0"'],
+    ].filter(([key]) => this._config[key]);
+  }
+
+  _renderSimPanel(lang) {
+    const field = (label, inner) => `<label class="sim-field"><span>${label}</span>${inner}</label>`;
+    const num = ([key, id, labelKey, attrs]) => {
+      const v = parseFloat(this._getState(this._config[key])?.state);
+      return field(t(labelKey, lang), `<input type="number" id="${id}" ${attrs} value="${Number.isFinite(v) ? escapeHtml(v) : ""}">`);
+    };
+    const statuses = ["", "standby", "cleaning", "smoothing", "emptying", "full", "unavailable"];
+    const statusSelect = field(t("dev_sim_status", lang), `<select id="sim-status">${statuses
+      .map((s) => `<option value="${s}" ${(this._simStatus || "") === s ? "selected" : ""}>${s ? escapeHtml(this._formatStatus(s, lang)) : t("dev_sim_auto", lang)}</option>`)
+      .join("")}</select>`);
+    const occ = this._config.sensor_occupancy
+      ? field(t("cat_present", lang), `<input type="checkbox" id="sim-occupied" ${this._getState(this._config.sensor_occupancy)?.state === "on" ? "checked" : ""}>`)
+      : "";
+    return `<div class="sim-fields">${statusSelect}${occ}${this._simFields().map(num).join("")}</div>`;
+  }
+
+  _simPress(entityId) {
+    const c = this._config;
+    const count = this._cleaningsCount();
+    if (entityId === c.btn_level) {
+      this._simSetStatus("smoothing", 37);
+    } else if (entityId === c.btn_clean) {
+      this._simSetStatus("cleaning", 20, () => {
+        if (c.sensor_cleanings_count && count !== null) this._simSetState(c.sensor_cleanings_count, count + 1);
+      });
+    } else if (entityId === c.btn_bag_replace) {
+      this._simSetStatus("emptying", 15);
+    } else if (entityId === c.btn_bag_changed) {
+      if (c.sensor_cleanings_count) this._simSetState(c.sensor_cleanings_count, 0);
+      this._simLitterAt = new Date().toISOString();
+      this._render();
+    } else if (entityId === c.btn_restart) {
+      this._simSetStatus("unavailable", 5);
+    }
+  }
+
   _pressButton(entityId) {
     if (!entityId) return;
+    if (this._sim) return this._simPress(entityId);
     const domain = entityId.split(".")[0];
     if (domain === "button") {
       this._callService("button", "press", { entity_id: entityId });
@@ -1793,6 +1959,13 @@ class LitterCard extends HTMLElement {
   _toggleEntity(entityId) {
     if (!entityId) return;
     const domain = entityId.split(".")[0];
+    if (this._sim) {
+      const cur = this._getState(entityId)?.state;
+      const next = domain === "lock" ? (cur === "locked" ? "unlocked" : "locked") : (cur === "on" ? "off" : "on");
+      this._simSetState(entityId, next);
+      this._render();
+      return;
+    }
     if (domain === "lock") {
       const stateObj = this._getState(entityId);
       if (stateObj && stateObj.state === "locked") {
@@ -1807,6 +1980,11 @@ class LitterCard extends HTMLElement {
 
   _setNumber(entityId, value) {
     if (!entityId) return;
+    if (this._sim) {
+      this._simSetState(entityId, parseFloat(value));
+      this._render();
+      return;
+    }
     this._callService("number", "set_value", {
       entity_id: entityId,
       value: parseFloat(value),
@@ -1815,6 +1993,11 @@ class LitterCard extends HTMLElement {
 
   _setSelect(entityId, option) {
     if (!entityId) return;
+    if (this._sim) {
+      this._simSetState(entityId, option);
+      this._render();
+      return;
+    }
     this._callService("select", "select_option", {
       entity_id: entityId,
       option: option,
@@ -1874,7 +2057,9 @@ class LitterCard extends HTMLElement {
     const problemState = this._getState(this._config.sensor_problem);
     const hasProblem = problemState && (problemState.state === "on" || problemState.state === "problem");
 
-    const statusState = this._getState(this._config.sensor_status);
+    const statusState = (this._sim && this._simStatus)
+      ? { state: this._simStatus, attributes: {} }
+      : this._getState(this._config.sensor_status);
     const statusText = statusState ? this._formatStatus(statusState.state, lang) : (isOccupied ? t("status_occupied", lang) : t("status_ready", lang));
     const rawStatus = statusState ? canonicalStatus(statusState.state) : "";
     const isStatusFull = rawStatus === "full";
@@ -1888,11 +2073,12 @@ class LitterCard extends HTMLElement {
     if (!isLeveling) this._levelStart = null;
     else if (!this._levelStart) this._levelStart = Date.now();
     const drumElapsed = isLeveling ? Math.min((Date.now() - this._levelStart) / 1000, 37).toFixed(2) : 0;
+    const isDevBuild = CARD_VERSION.includes("-dev");
 
     const cleaningsState = this._getState(this._config.sensor_cleanings_count);
     const visitsState = this._getState(this._config.sensor_total_visits);
     const durationState = this._getState(this._config.sensor_visit_duration);
-    const litterDateText = formatDateState(this._litterChangedAt, lang);
+    const litterDateText = formatDateState((this._sim && this._simLitterAt) || this._litterChangedAt, lang);
 
     // Image source (custom URL > model embedded image > default image)
     let modelImgData = DEFAULT_IMAGE;
@@ -1993,7 +2179,7 @@ class LitterCard extends HTMLElement {
         <!-- Main Image Visual with Dynamic Overlays -->
         <div class="image-container">
           <img class="litter-img" src="${escapeHtml(imgSrc)}" alt="${escapeHtml(cardTitle)}" />
-          ${isLeveling ? `<div class="drum-clip"><img class="drum-spin" src="${escapeHtml(imgSrc)}" alt="" /></div>` : ''}
+          ${isLeveling ? `<div class="drum-clip"><div class="drum-spin"><img class="drum-img" src="${escapeHtml(imgSrc)}" alt="" /></div></div>` : ''}
 
           <!-- Entrance Light / Occupancy Indicator -->
           <div class="entrance-glow ${isOffline ? 'offline' : ''}">
@@ -2027,6 +2213,14 @@ class LitterCard extends HTMLElement {
             </div>
           ` : ''}
         </div>
+
+        ${isDevBuild ? `
+          <div class="dev-tools">
+            <span class="dev-tools-title">${t(this._sim ? "dev_sim_active" : "dev_sim_title", lang)}</span>
+            <button class="dev-tools-btn ${this._sim ? 'on' : ''}" id="dev-sim-toggle">${t(this._sim ? "dev_sim_stop" : "dev_sim_start", lang)}</button>
+            ${this._sim ? this._renderSimPanel(lang) : ''}
+          </div>
+        ` : ''}
 
         <!-- Quick Stats Sensors Grid -->
         ${(this._config.sensor_cleanings_count || this._config.sensor_total_visits || this._config.sensor_visit_duration) ? `
@@ -2256,6 +2450,39 @@ class LitterCard extends HTMLElement {
   _bindEvents() {
     const root = this.shadowRoot;
 
+    // Dev builds only: simulation switch
+    const simToggle = root.getElementById("dev-sim-toggle");
+    if (simToggle) {
+      simToggle.addEventListener("click", () => this._setSim(!this._sim));
+    }
+    if (this._sim) {
+      this._simFields().forEach(([key, id]) => {
+        const el = root.getElementById(id);
+        if (el) {
+          el.addEventListener("change", (e) => {
+            if (e.target.value === "") return;
+            this._simSetState(this._config[key], e.target.value);
+            this._render();
+          });
+        }
+      });
+      const simStatus = root.getElementById("sim-status");
+      if (simStatus) {
+        simStatus.addEventListener("change", (e) => {
+          clearTimeout(this._simTimer);
+          this._simStatus = e.target.value || null;
+          this._render();
+        });
+      }
+      const simOcc = root.getElementById("sim-occupied");
+      if (simOcc) {
+        simOcc.addEventListener("change", (e) => {
+          this._simSetState(this._config.sensor_occupancy, e.target.checked ? "on" : "off");
+          this._render();
+        });
+      }
+    }
+
     // Accordion toggle
     const toggleBtn = root.getElementById("config-toggle");
     if (toggleBtn) {
@@ -2272,7 +2499,7 @@ class LitterCard extends HTMLElement {
       if (el) {
         el.addEventListener("click", () => {
           this._pressButton(this._config[key]);
-          if (key === "btn_bag_changed") this._markLitterChanged();
+          if (key === "btn_bag_changed" && !this._sim) this._markLitterChanged();
         });
       }
     });
