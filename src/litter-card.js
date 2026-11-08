@@ -2,7 +2,7 @@ import { DEFAULT_IMAGE, MODEL_IMAGES } from './image-data.js';
 import { LITTER_MODELS, DEFAULT_MODEL_ID, getModelConfig } from './models/index.js';
 import { getCardStyles, EDITOR_STYLES } from './styles.js';
 
-const CARD_VERSION = "0.60-dev";
+const CARD_VERSION = "0.61-dev";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -1247,7 +1247,7 @@ class LitterCard extends HTMLElement {
         <!-- Main Image Visual with Dynamic Overlays -->
         <div class="image-container">
           <img class="litter-img" src="${escapeHtml(imgSrc)}" alt="${escapeHtml(cardTitle)}" />
-          ${isBagAnim ? `<div class="drum-clip"><div class="drum-spin bag"><img class="drum-img" src="${escapeHtml(imgSrc)}" alt="" /><div class="hatch-hole"></div><div class="hatch-door"><img class="drum-img" src="${escapeHtml(imgSrc)}" alt="" /></div></div></div>` : (isLeveling ? `<div class="drum-clip"><div class="drum-spin"><img class="drum-img" src="${escapeHtml(imgSrc)}" alt="" /></div></div>` : '')}
+          ${isBagAnim ? `<div class="drum-clip"><div class="bag-rot"><div class="bag-disc"><img class="drum-img" src="${escapeHtml(imgSrc)}" alt="" /><div class="hatch-hole"></div></div><div class="hatch-door"><img class="drum-img" src="${escapeHtml(imgSrc)}" alt="" /></div></div></div>` : (isLeveling ? `<div class="drum-clip"><div class="drum-spin"><img class="drum-img" src="${escapeHtml(imgSrc)}" alt="" /></div></div>` : '')}
 
           <!-- Entrance Light / Occupancy Indicator -->
           <div class="entrance-glow ${isOffline ? 'offline' : ''}">

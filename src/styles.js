@@ -132,21 +132,29 @@ export function getCardStyles({
         }
         /* Bag replacement: drum turns 20deg counter-clockwise (same speed as leveling,
            about 3.8deg/s), left-top hatch tilts open, holds 60 s, then everything returns. */
-        .drum-spin.bag {
-          perspective: 1200px;
+        .bag-rot {
+          position: absolute;
+          inset: 0;
+          transform-origin: 50.2% 46.5%;
           animation: bag-spin ${bagTotal}s ease-in-out 1 forwards;
           animation-delay: -${bagElapsed}s;
+        }
+        .bag-disc {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(to bottom, #f7f7f7 0%, #e6e6e6 45%, #d6d6d6 100%);
+          clip-path: ellipse(40.6% 38.8% at 50.2% 46.5%);
         }
         .hatch-hole {
           position: absolute;
           inset: 0;
           clip-path: ${HATCH_POLYGON};
-          background: radial-gradient(ellipse at 60% 70%, #55555a 0%, #2c2c30 60%, #1b1b1e 100%);
+          background: radial-gradient(ellipse at 60% 70%, #a4a4a9 0%, #8a8a90 60%, #747479 100%);
         }
         .hatch-door {
           position: absolute;
           inset: 0;
-          transform-origin: 10% 30%;
+          transform-origin: 10.1% 36.3%;
           animation: bag-hatch ${bagTotal}s ease-in-out 1 forwards;
           animation-delay: -${bagElapsed}s;
         }
@@ -159,13 +167,16 @@ export function getCardStyles({
           ${bp4}%   { transform: rotate(-20deg); }
           100%      { transform: rotate(0deg); }
         }
+        /* hatch hinged at the lower-left end of its panel, folding out to the left of the drum
+           (like a lid), outside the circle clip, with a shadow so it stays readable over the white
+           background (2D only: 3D made the panel vanish) */
         @keyframes bag-hatch {
-          0%        { transform: rotateY(0deg); }
-          ${bp1}%   { transform: rotateY(0deg); }
-          ${bp2}%   { transform: rotateY(-62deg); }
-          ${bp3}%   { transform: rotateY(-62deg); }
-          ${bp4}%   { transform: rotateY(0deg); }
-          100%      { transform: rotateY(0deg); }
+          0%        { transform: none; filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
+          ${bp1}%   { transform: none; filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
+          ${bp2}%   { transform: rotate(-80deg) scale(0.5); filter: drop-shadow(-3px 3px 4px rgba(0,0,0,0.45)); }
+          ${bp3}%   { transform: rotate(-80deg) scale(0.5); filter: drop-shadow(-3px 3px 4px rgba(0,0,0,0.45)); }
+          ${bp4}%   { transform: none; filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
+          100%      { transform: none; filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
         }
         .drum-img {
           width: 100%;
