@@ -2,7 +2,7 @@ import { DEFAULT_IMAGE, MODEL_IMAGES } from './image-data.js';
 import { LITTER_MODELS, DEFAULT_MODEL_ID, getModelConfig } from './models/index.js';
 import { getCardStyles, EDITOR_STYLES } from './styles.js';
 
-const CARD_VERSION = "0.55-dev";
+const CARD_VERSION = "0.56-dev";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -993,11 +993,11 @@ class LitterCard extends HTMLElement {
     const blinkLevel = rawStatus === "smoothing" ? "blink" : "";
     const blinkBagChanged = rawStatus === "emptying" ? "blink" : "";
 
-    // Drum animation while leveling; a re-render keeps the phase of the running cycle
+    // Drum animation while leveling: one rocking; a re-render keeps its phase
     const isLeveling = rawStatus === "smoothing";
     if (!isLeveling) this._levelStart = null;
     else if (!this._levelStart) this._levelStart = Date.now();
-    const drumElapsed = isLeveling ? (((Date.now() - this._levelStart) / 1000) % 10).toFixed(2) : 0;
+    const drumElapsed = isLeveling ? Math.min((Date.now() - this._levelStart) / 1000, 10).toFixed(2) : 0;
 
     const cleaningsState = this._getState(this._config.sensor_cleanings_count);
     const visitsState = this._getState(this._config.sensor_total_visits);

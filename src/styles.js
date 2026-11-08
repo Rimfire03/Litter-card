@@ -99,7 +99,7 @@ export function getCardStyles({
         .drum-clip {
           position: absolute;
           inset: 0;
-          clip-path: inset(0 0 38.5% 0);
+          clip-path: inset(0 0 34.2% 0);
           pointer-events: none;
         }
         .drum-spin {
@@ -110,15 +110,14 @@ export function getCardStyles({
           object-fit: contain;
           clip-path: ellipse(40.4% 38.6% at 50.2% 44.2%);
           transform-origin: 50.2% 44.2%;
-          animation: drum-level 10s ease-in-out infinite;
+          animation: drum-level 10s ease-in-out 1 forwards;
           animation-delay: -${drumElapsed}s;
         }
+        /* one single right-left rocking, then rest until the status changes */
         @keyframes drum-level {
           0%   { transform: rotate(0deg); }
-          20%  { transform: rotate(35deg); }
-          45%  { transform: rotate(-35deg); }
-          65%  { transform: rotate(25deg); }
-          85%  { transform: rotate(-25deg); }
+          25%  { transform: rotate(35deg); }
+          75%  { transform: rotate(-35deg); }
           100% { transform: rotate(0deg); }
         }
 

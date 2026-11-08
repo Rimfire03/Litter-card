@@ -225,7 +225,7 @@ export function getCardStyles({
         .drum-clip {
           position: absolute;
           inset: 0;
-          clip-path: inset(0 0 38.5% 0);
+          clip-path: inset(0 0 34.2% 0);
           pointer-events: none;
         }
         .drum-spin {
@@ -236,15 +236,14 @@ export function getCardStyles({
           object-fit: contain;
           clip-path: ellipse(40.4% 38.6% at 50.2% 44.2%);
           transform-origin: 50.2% 44.2%;
-          animation: drum-level 10s ease-in-out infinite;
+          animation: drum-level 10s ease-in-out 1 forwards;
           animation-delay: -${drumElapsed}s;
         }
+        /* one single right-left rocking, then rest until the status changes */
         @keyframes drum-level {
           0%   { transform: rotate(0deg); }
-          20%  { transform: rotate(35deg); }
-          45%  { transform: rotate(-35deg); }
-          65%  { transform: rotate(25deg); }
-          85%  { transform: rotate(-25deg); }
+          25%  { transform: rotate(35deg); }
+          75%  { transform: rotate(-35deg); }
           100% { transform: rotate(0deg); }
         }
 
@@ -893,7 +892,7 @@ export const EDITOR_STYLES = `
 `;
 
 
-const CARD_VERSION = "0.55-dev";
+const CARD_VERSION = "0.56-dev";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -1884,11 +1883,11 @@ class LitterCard extends HTMLElement {
     const blinkLevel = rawStatus === "smoothing" ? "blink" : "";
     const blinkBagChanged = rawStatus === "emptying" ? "blink" : "";
 
-    // Drum animation while leveling; a re-render keeps the phase of the running cycle
+    // Drum animation while leveling: one rocking; a re-render keeps its phase
     const isLeveling = rawStatus === "smoothing";
     if (!isLeveling) this._levelStart = null;
     else if (!this._levelStart) this._levelStart = Date.now();
-    const drumElapsed = isLeveling ? (((Date.now() - this._levelStart) / 1000) % 10).toFixed(2) : 0;
+    const drumElapsed = isLeveling ? Math.min((Date.now() - this._levelStart) / 1000, 10).toFixed(2) : 0;
 
     const cleaningsState = this._getState(this._config.sensor_cleanings_count);
     const visitsState = this._getState(this._config.sensor_total_visits);
