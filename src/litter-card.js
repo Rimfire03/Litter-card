@@ -2,7 +2,7 @@ import { DEFAULT_IMAGE, MODEL_IMAGES } from './image-data.js';
 import { LITTER_MODELS, DEFAULT_MODEL_ID, getModelConfig } from './models/index.js';
 import { getCardStyles, EDITOR_STYLES } from './styles.js';
 
-const CARD_VERSION = "0.67";
+const CARD_VERSION = "0.68-dev";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -1027,7 +1027,8 @@ class LitterCard extends HTMLElement {
       this._render();
       return;
     }
-    this._callService("number", "set_value", {
+    // input_number helpers have their own service domain (number.set_value would do nothing on them)
+    this._callService(entityId.startsWith("input_number.") ? "input_number" : "number", "set_value", {
       entity_id: entityId,
       value: parseFloat(value),
     });
@@ -1040,7 +1041,7 @@ class LitterCard extends HTMLElement {
       this._render();
       return;
     }
-    this._callService("select", "select_option", {
+    this._callService(entityId.startsWith("input_select.") ? "input_select" : "select", "select_option", {
       entity_id: entityId,
       option: option,
     });

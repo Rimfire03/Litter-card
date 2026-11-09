@@ -46,6 +46,8 @@ If you find this card helpful, consider buying me a coffee to support the develo
 - **Quick Statistics Overview**: Cleanings count, total visit counter, and duration of the last visit.
 - **Manual Control Action Buttons**: Clean, Level litter, Replace bag, Change litter ("Bag changed"), and Restart device.
 - **Status-aware effects**: the Clean, Level and Change litter buttons glow while the device is cleaning, leveling or emptying. When the bag is full, the status badge turns orange and blinks, and so does the Replace bag button. When the status is `unavailable`, the card shows the device as offline (grey halo, red status, no bag badge). Status values are recognised in English and in French (for example `cleaning` / `Nettoyage`, `smoothing` / `Lissage`, `emptying` / `Vidange`, `full` / `Plein`).
+- **Drum animations**: the drum of the picture turns like the real one. Leveling rocks it right then left (37 s); cleaning turns it clockwise, then counter-clockwise to -180°, back to 0° and chains the leveling; litter change makes one full clockwise turn; bag replacement turns it 20° counter-clockwise, folds the left hatch open, waits one minute, then closes everything. They start from the matching button or from the device status, and can be turned off with the `animations` option (on by default).
+- **Simulation mode (dev builds only)**: pre-release versions (`-dev`) show a "Start simulation" button under the picture. While it is on, no command is sent to the litter box: buttons, switches and sliders are played locally, and you can set the status, presence, weight, visits, visit duration, cleanings and bag full alert by hand to preview every animation. It stops by itself when you leave or reload the page.
 - **Per-cat weight tracking** (set the number of cats and their names):
   - Each weigh-in of the weight sensor is assigned to a cat: by grouping the weights (names go from the lightest to the heaviest), or, if you give a reference weight for every cat (a decimal number with a dot, in the sensor's unit, for example `4.2`), to the nearest reference.
   - The references adjust automatically as the cats' weight changes, and a weigh-in too far from every reference (a visitor) is ignored. Cats whose weights are closer than 0.4 can be mixed up.
@@ -59,7 +61,7 @@ If you find this card helpful, consider buying me a coffee to support the develo
   - Child lock (Lock / Switch)
   - Delay before cleaning (Slider in minutes)
   - Cleaning interval (Slider in minutes)
-  - Full bin alert calibration (Slider in cycles)
+  - Bag full alert threshold (Slider in cycles, from the `cfg_bin_calibration` entity)
   - Litter type selection (Dropdown)
   - Mass unit selection (Dropdown kg / lb)
 - **100% Modular**: Any entity not defined in your card configuration will automatically be hidden from view.
@@ -211,10 +213,12 @@ The Tuya cleanings counter goes back to 0 when the bag is changed, so the alert 
   - Silhouette intégrée de la machine automatique.
   - **Aura & témoin d'entrée** : s'illumine en **vert** quand le bac est libre et en **rouge** pulsant quand un chat est présent (`occupation = on`). Elle devient **grise** (« Litière hors ligne ») quand le capteur d'état est `unavailable`.
   - **Affichage du Poids du Chat** : valeur en temps réel intégrée directement dans le rond noir inférieur.
-  - **Alerte Sac Plein** : badge dynamique et animé en haut à droite de l'image.
+  - **Alerte Sac Plein** : badge en haut à droite de l'image, piloté par l'entité `sensor_bin_full` (`on` = « Sac plein ! », `off` = « Sac OK »). Le seuil d'alerte est l'entité nombre `cfg_bin_calibration`. Ce peuvent être les entités Tuya ou des entités que vous créez vous-même dans Home Assistant, voir [Alerte sac plein avec vos propres entités](#alerte-sac-plein-avec-vos-propres-entités).
 - **Statistiques en un coup d'œil** : Nombre de nettoyages, nombre total de visites et durée du passage.
 - **Boutons de Contrôle Manuel** : Nettoyer, Niveler, Remplacer sac, Changer la litière, Redémarrer.
 - **Effets selon l'état** : les boutons Nettoyer, Niveler et Changer la litière s'illuminent pendant le nettoyage, le lissage ou la vidange. Quand le sac est plein, le badge d'état passe à l'orange et clignote, tout comme le bouton Remplacer sac. Quand l'état est `unavailable`, la carte affiche le bac comme hors ligne (aura grise, état en rouge, pas de badge de sac). Les états sont reconnus en anglais et en français (par exemple `cleaning` / `Nettoyage`, `smoothing` / `Lissage`, `emptying` / `Vidange`, `full` / `Plein`).
+- **Animations du tambour** : le tambour de l'image tourne comme le vrai. Le nivelage le balance à droite puis à gauche (37 s) ; le nettoyage le fait tourner dans le sens horaire, puis antihoraire jusqu'à -180°, revenir à 0° et enchaîne le nivelage ; le changement de litière fait un tour complet dans le sens horaire ; le remplacement de sac le tourne de 20° dans le sens antihoraire, ouvre le capot gauche, attend une minute, puis referme tout. Elles démarrent depuis le bouton correspondant ou depuis l'état de l'appareil, et se désactivent avec l'option `animations` (activées par défaut).
+- **Mode simulation (versions dev uniquement)** : les pré-versions (`-dev`) affichent un bouton « Activer la simulation » sous l'image. Tant qu'il est actif, aucune commande n'est envoyée à la litière : boutons, interrupteurs et curseurs sont joués en local, et vous réglez à la main l'état, la présence, le poids, les visites, la durée de visite, les nettoyages et l'alerte sac plein pour prévisualiser chaque animation. Il s'arrête tout seul quand vous quittez ou rechargez la page.
 - **Suivi du poids par chat** (indiquez le nombre de chats et leurs noms) :
   - Chaque pesée du capteur de poids est attribuée à un chat : en regroupant les poids (noms donnés du plus léger au plus lourd), ou, si vous indiquez un poids de référence pour chaque chat (nombre décimal avec un point, dans l'unité du capteur, par exemple `4.2`), au chat dont la référence est la plus proche.
   - Les références s'ajustent automatiquement avec l'évolution du poids des chats, et une pesée trop éloignée de toutes les références (un visiteur) est ignorée. Des chats dont les poids sont à moins de 0,4 d'écart peuvent être confondus.
@@ -228,11 +232,36 @@ The Tuya cleanings counter goes back to 0 when the bag is changed, so the alert 
   - Sécurité enfants (Verrou / Interrupteur)
   - Délai avant nettoyage (Curseur en minutes)
   - Intervalle de nettoyage (Curseur en minutes)
-  - Calibration du sac plein (Curseur en cycles)
+  - Seuil de l'alerte sac plein (Curseur en cycles, depuis l'entité `cfg_bin_calibration`)
   - Type de litière (Sélecteur Minérale / Mixte)
   - Unité de mesure (Sélecteur kg / lb)
 - **100% Modulaire** : Toute entité non configurée sera automatiquement masquée du tableau de bord.
 - **Éditeur Graphique Lovelace Intégré** : Configuration visuelle facile depuis l'interface Home Assistant.
+
+### Alerte sac plein avec vos propres entités
+
+L'alerte sac plein n'a pas à dépendre des seuils imposés par Tuya. `sensor_bin_full` et `cfg_bin_calibration` acceptent n'importe quelle entité : créez les vôtres dans Home Assistant et indiquez-les à la carte.
+
+- un assistant **Nombre** (`input_number`, par exemple jusqu'à 50 cycles) pour `cfg_bin_calibration` : il devient le curseur de seuil de la carte ;
+- un **capteur binaire modèle** (`template`) qui passe à `on` quand le compteur de nettoyages atteint ce seuil, pour `sensor_bin_full`.
+
+```yaml
+template:
+  - binary_sensor:
+      - name: "Sac litière plein"
+        state: >
+          {{ states('sensor.cat_litter_box_number_of_cleanings') | int(0)
+             >= states('input_number.seuil_sac_litiere') | int(30) }}
+```
+
+```yaml
+sensor_bin_full: binary_sensor.sac_litiere_plein
+cfg_bin_calibration: input_number.seuil_sac_litiere
+```
+
+Le compteur de nettoyages Tuya repasse à 0 au changement de sac, l'alerte s'efface donc toute seule. Avec un compteur à vous, remettez-le à 0 à l'appui sur « Changer la litière ».
+
+Option `animations` : `on` (par défaut) ou `off` pour désactiver toutes les animations du tambour.
 
 ---
 
