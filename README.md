@@ -42,7 +42,7 @@ If you find this card helpful, consider buying me a coffee to support the develo
   - Embedded clean vector/image representation of the automatic litter box.
   - **Entrance Halo & Indicator**: glows **green** when the litter box is free and **red** with a pulsing glow when a cat is inside (`occupancy = on`). It turns **grey** ("Litter box offline") when the status sensor is `unavailable`.
   - **Cat Weight Display**: Live weight value dynamically overlaid in the bottom circular dial.
-  - **Waste Bin Status Alert**: badge in the top right corner, driven by the `sensor_bin_full` entity (on = "Bag full", off = "Bag OK"). The alert threshold is the `cfg_bin_calibration` number entity. Both can be the Tuya entities or entities you create yourself in Home Assistant, see [Bag full alert with your own entities](#bag-full-alert-with-your-own-entities).
+  - **Waste Bin Status Alert**: badge in the top right corner ("Bag full" / "Bag OK"). It turns to "Bag full" when the cleanings counter (`sensor_cleanings_count`) reaches the alert threshold (`cfg_bin_calibration`), which can be the Tuya number or a helper you create yourself in Home Assistant. Without counter or threshold, the `sensor_bin_full` entity decides. See [Bag full alert with your own entities](#bag-full-alert-with-your-own-entities).
 - **Quick Statistics Overview**: Cleanings count, total visit counter, and duration of the last visit.
 - **Manual Control Action Buttons**: Clean, Level litter, Replace bag, Change litter ("Bag changed"), and Restart device.
 - **Status-aware effects**: the Clean, Level and Change litter buttons glow while the device is cleaning, leveling or emptying. When the bag is full, the status badge turns orange and blinks, and so does the Replace bag button. When the status is `unavailable`, the card shows the device as offline (grey halo, red status, no bag badge). Status values are recognised in English and in French (for example `cleaning` / `Nettoyage`, `smoothing` / `Lissage`, `emptying` / `Vidange`, `full` / `Plein`).
@@ -146,7 +146,7 @@ cfg_unit: select.cat_litter_box_unit
 | `sensor_cat_weight` | Sensor | Cat weight value displayed in the lower circular gauge |
 | `sensor_status` | Sensor | Global status badge (*Standby, Cleaning, Sleep...*) |
 | `sensor_cleanings_count` | Sensor | Cleanings counter tile |
-| `sensor_bin_full` | Binary sensor | Waste bin alert badge (`on` = bag full). Tuya entity or your own, see [below](#bag-full-alert-with-your-own-entities) |
+| `sensor_bin_full` | Binary sensor | Waste bin alert badge (`on` = bag full), used only when `sensor_cleanings_count` or `cfg_bin_calibration` is missing or unavailable. Tuya entity or your own, see [below](#bag-full-alert-with-your-own-entities) |
 | `sensor_total_visits` | Sensor | Total visits counter tile |
 | `sensor_visit_duration` | Sensor | Last visit duration tile |
 | `cfg_auto_clean` | Switch entity | Auto-clean switch toggle |
@@ -155,7 +155,7 @@ cfg_unit: select.cat_litter_box_unit
 | `cfg_child_lock` | Lock / Switch | Child lock toggle |
 | `cfg_clean_wait_time` | Number entity | Delay before cleaning (minutes) |
 | `cfg_clean_interval` | Number entity | Cleaning interval (minutes) |
-| `cfg_bin_calibration` | Number entity | Bag full threshold slider in the settings panel (cycles). Tuya entity or your own, see [below](#bag-full-alert-with-your-own-entities) |
+| `cfg_bin_calibration` | Number entity | Bag full threshold (cycles): the badge turns to "Bag full" when the cleanings counter reaches it, and it is the slider of the settings panel. Tuya number or your own helper, see [below](#bag-full-alert-with-your-own-entities) |
 | `cfg_litter_type` | Select entity | Litter type selector (e.g. Mineral, Mixed) |
 | `cfg_unit` | Select entity | Weight unit selector (kg / lb) |
 | `entrance_pos_x` | Number (%) | Custom X position of the entrance halo (default: 50) |
@@ -182,14 +182,14 @@ cfg_unit: select.cat_litter_box_unit
 
 The bag full alert does not have to depend on the thresholds Tuya imposes. `cfg_bin_calibration` accepts any number entity, so you can create your own **Number** helper in Home Assistant (`input_number`, for example up to 50 cycles): it becomes the threshold slider of the card.
 
-**Simplest setup:** do not set `sensor_bin_full`. When it is missing, the card compares `sensor_cleanings_count` with `cfg_bin_calibration` itself and shows "Bag full" as soon as the counter reaches the threshold.
+**Simplest setup:** set `sensor_cleanings_count` and `cfg_bin_calibration`. The card compares them itself and shows "Bag full" as soon as the counter reaches the threshold, whatever `sensor_bin_full` says (the Tuya `binary_sensor.cat_litter_box_bin_full` can stay configured, it is only used when the counter or the threshold is unavailable).
 
 ```yaml
 sensor_cleanings_count: sensor.cat_litter_box_number_of_cleanings
 cfg_bin_calibration: input_number.litter_bag_threshold
 ```
 
-If `sensor_bin_full` is set (for example the Tuya `binary_sensor.cat_litter_box_bin_full`), it decides, whatever the counter says. To use your own rule instead, point it at a **template binary sensor** that turns `on` when the counter reaches the threshold, so that your automations can use it too:
+Without `sensor_cleanings_count` (or without a threshold entity), `sensor_bin_full` decides. It can be a **template binary sensor** of your own, which is also handy for your automations:
 
 ```yaml
 template:
@@ -219,7 +219,7 @@ The Tuya cleanings counter goes back to 0 when the bag is changed, so the alert 
   - Silhouette intégrée de la machine automatique.
   - **Aura & témoin d'entrée** : s'illumine en **vert** quand le bac est libre et en **rouge** pulsant quand un chat est présent (`occupation = on`). Elle devient **grise** (« Litière hors ligne ») quand le capteur d'état est `unavailable`.
   - **Affichage du Poids du Chat** : valeur en temps réel intégrée directement dans le rond noir inférieur.
-  - **Alerte Sac Plein** : badge en haut à droite de l'image, piloté par l'entité `sensor_bin_full` (`on` = « Sac plein ! », `off` = « Sac OK »). Le seuil d'alerte est l'entité nombre `cfg_bin_calibration`. Ce peuvent être les entités Tuya ou des entités que vous créez vous-même dans Home Assistant, voir [Alerte sac plein avec vos propres entités](#alerte-sac-plein-avec-vos-propres-entités).
+  - **Alerte Sac Plein** : badge en haut à droite de l'image (« Sac plein ! » / « Sac OK »). Il passe à « Sac plein ! » quand le compteur de nettoyages (`sensor_cleanings_count`) atteint le seuil d'alerte (`cfg_bin_calibration`), qui peut être le nombre Tuya ou un assistant que vous créez vous-même dans Home Assistant. Sans compteur ou sans seuil, c'est l'entité `sensor_bin_full` qui décide. Voir [Alerte sac plein avec vos propres entités](#alerte-sac-plein-avec-vos-propres-entités).
 - **Statistiques en un coup d'œil** : Nombre de nettoyages, nombre total de visites et durée du passage.
 - **Boutons de Contrôle Manuel** : Nettoyer, Niveler, Remplacer sac, Changer la litière, Redémarrer.
 - **Effets selon l'état** : les boutons Nettoyer, Niveler et Changer la litière s'illuminent pendant le nettoyage, le lissage ou la vidange. Quand le sac est plein, le badge d'état passe à l'orange et clignote, tout comme le bouton Remplacer sac. Quand l'état est `unavailable`, la carte affiche le bac comme hors ligne (aura grise, état en rouge, pas de badge de sac). Les états sont reconnus en anglais et en français (par exemple `cleaning` / `Nettoyage`, `smoothing` / `Lissage`, `emptying` / `Vidange`, `full` / `Plein`).
@@ -248,14 +248,14 @@ The Tuya cleanings counter goes back to 0 when the bag is changed, so the alert 
 
 L'alerte sac plein n'a pas à dépendre des seuils imposés par Tuya. `cfg_bin_calibration` accepte n'importe quelle entité nombre : créez votre assistant **Nombre** dans Home Assistant (`input_number`, par exemple jusqu'à 50 cycles) et il devient le curseur de seuil de la carte.
 
-**Montage le plus simple :** ne renseignez pas `sensor_bin_full`. Quand il est absent, la carte compare elle-même `sensor_cleanings_count` à `cfg_bin_calibration` et affiche « Sac plein » dès que le compteur atteint le seuil.
+**Montage le plus simple :** renseignez `sensor_cleanings_count` et `cfg_bin_calibration`. La carte les compare elle-même et affiche « Sac plein » dès que le compteur atteint le seuil, quoi que dise `sensor_bin_full` (le `binary_sensor.cat_litter_box_bin_full` de Tuya peut rester configuré : il ne sert que si le compteur ou le seuil est indisponible).
 
 ```yaml
 sensor_cleanings_count: sensor.cat_litter_box_number_of_cleanings
 cfg_bin_calibration: input_number.seuil_sac_litiere
 ```
 
-Si `sensor_bin_full` est renseigné (par exemple le `binary_sensor.cat_litter_box_bin_full` de Tuya), c'est lui qui décide, quel que soit le compteur. Pour utiliser votre propre règle, indiquez un **capteur binaire modèle** (`template`) qui passe à `on` quand le compteur atteint le seuil, ce qui permet aussi de s'en servir dans vos automatisations :
+Sans `sensor_cleanings_count` (ou sans entité de seuil), c'est `sensor_bin_full` qui décide. Ce peut être un **capteur binaire modèle** (`template`) à vous, pratique aussi pour vos automatisations :
 
 ```yaml
 template:
