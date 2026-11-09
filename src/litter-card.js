@@ -2,7 +2,7 @@ import { DEFAULT_IMAGE, MODEL_IMAGES } from './image-data.js';
 import { LITTER_MODELS, DEFAULT_MODEL_ID, getModelConfig } from './models/index.js';
 import { getCardStyles, EDITOR_STYLES } from './styles.js';
 
-const CARD_VERSION = "0.69";
+const CARD_VERSION = "0.70-dev";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -1087,8 +1087,19 @@ class LitterCard extends HTMLElement {
     const occState = this._getState(this._config.sensor_occupancy);
     const isOccupied = occState && (occState.state === "on" || occState.state === "true" || occState.state === "occupied");
 
+    // Bag full: the sensor_bin_full entity decides; without one, the card compares the cleanings
+    // counter with the cfg_bin_calibration threshold (a Home Assistant helper works for both)
     const binFullState = this._getState(this._config.sensor_bin_full);
-    const isBinFull = binFullState && (binFullState.state === "on" || binFullState.state === "true" || binFullState.state === "full");
+    let isBinFull = binFullState && (binFullState.state === "on" || binFullState.state === "true" || binFullState.state === "full");
+    let hasBinAlert = Boolean(this._config.sensor_bin_full);
+    if (!hasBinAlert) {
+      const used = this._cleaningsCount();
+      const limit = parseFloat(this._getState(this._config.cfg_bin_calibration)?.state);
+      if (used !== null && Number.isFinite(limit)) {
+        hasBinAlert = true;
+        isBinFull = used >= limit;
+      }
+    }
 
     const weightState = this._getState(this._config.sensor_cat_weight);
     let weightVal = "--";
@@ -1252,7 +1263,7 @@ class LitterCard extends HTMLElement {
           </div>
 
           <!-- Bin status overlay -->
-          ${this._config.sensor_bin_full && !isOffline ? `
+          ${hasBinAlert && !isOffline ? `
             <div class="bin-status-overlay">
               <ha-icon icon="${isBinFull ? 'mdi:delete-alert' : 'mdi:delete-outline'}" style="--mdc-icon-size: 16px;"></ha-icon>
               <span>${isBinFull ? t("bin_full_alert", lang) : t("bin_ok", lang)}</span>

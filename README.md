@@ -180,10 +180,16 @@ cfg_unit: select.cat_litter_box_unit
 
 ### Bag full alert with your own entities
 
-The bag full alert does not have to depend on the thresholds Tuya imposes. `sensor_bin_full` and `cfg_bin_calibration` accept any entity, so you can create your own in Home Assistant and point the card at them:
+The bag full alert does not have to depend on the thresholds Tuya imposes. `cfg_bin_calibration` accepts any number entity, so you can create your own **Number** helper in Home Assistant (`input_number`, for example up to 50 cycles): it becomes the threshold slider of the card.
 
-- a **Number** helper (`input_number`, for example up to 50 cycles) as `cfg_bin_calibration`: it becomes the threshold slider of the card;
-- a **template binary sensor** that turns `on` when the cleanings counter reaches that threshold, as `sensor_bin_full`.
+**Simplest setup:** do not set `sensor_bin_full`. When it is missing, the card compares `sensor_cleanings_count` with `cfg_bin_calibration` itself and shows "Bag full" as soon as the counter reaches the threshold.
+
+```yaml
+sensor_cleanings_count: sensor.cat_litter_box_number_of_cleanings
+cfg_bin_calibration: input_number.litter_bag_threshold
+```
+
+If `sensor_bin_full` is set (for example the Tuya `binary_sensor.cat_litter_box_bin_full`), it decides, whatever the counter says. To use your own rule instead, point it at a **template binary sensor** that turns `on` when the counter reaches the threshold, so that your automations can use it too:
 
 ```yaml
 template:
@@ -240,10 +246,16 @@ The Tuya cleanings counter goes back to 0 when the bag is changed, so the alert 
 
 ### Alerte sac plein avec vos propres entités
 
-L'alerte sac plein n'a pas à dépendre des seuils imposés par Tuya. `sensor_bin_full` et `cfg_bin_calibration` acceptent n'importe quelle entité : créez les vôtres dans Home Assistant et indiquez-les à la carte.
+L'alerte sac plein n'a pas à dépendre des seuils imposés par Tuya. `cfg_bin_calibration` accepte n'importe quelle entité nombre : créez votre assistant **Nombre** dans Home Assistant (`input_number`, par exemple jusqu'à 50 cycles) et il devient le curseur de seuil de la carte.
 
-- un assistant **Nombre** (`input_number`, par exemple jusqu'à 50 cycles) pour `cfg_bin_calibration` : il devient le curseur de seuil de la carte ;
-- un **capteur binaire modèle** (`template`) qui passe à `on` quand le compteur de nettoyages atteint ce seuil, pour `sensor_bin_full`.
+**Montage le plus simple :** ne renseignez pas `sensor_bin_full`. Quand il est absent, la carte compare elle-même `sensor_cleanings_count` à `cfg_bin_calibration` et affiche « Sac plein » dès que le compteur atteint le seuil.
+
+```yaml
+sensor_cleanings_count: sensor.cat_litter_box_number_of_cleanings
+cfg_bin_calibration: input_number.seuil_sac_litiere
+```
+
+Si `sensor_bin_full` est renseigné (par exemple le `binary_sensor.cat_litter_box_bin_full` de Tuya), c'est lui qui décide, quel que soit le compteur. Pour utiliser votre propre règle, indiquez un **capteur binaire modèle** (`template`) qui passe à `on` quand le compteur atteint le seuil, ce qui permet aussi de s'en servir dans vos automatisations :
 
 ```yaml
 template:
