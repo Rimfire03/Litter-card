@@ -42,7 +42,7 @@ If you find this card helpful, consider buying me a coffee to support the develo
   - Embedded clean vector/image representation of the automatic litter box.
   - **Entrance Halo & Indicator**: glows **green** when the litter box is free and **red** with a pulsing glow when a cat is inside (`occupancy = on`). It turns **grey** ("Litter box offline") when the status sensor is `unavailable`.
   - **Cat Weight Display**: Live weight value dynamically overlaid in the bottom circular dial.
-  - **Waste Bin Status Alert**: badge computed by the card from `sensor_cleanings_count` (the device counter, which resets to 0 when the bag is changed). It turns to "Bag full" when the counter reaches an alert threshold (1 to 50, default 30) set from the card settings panel. The threshold is stored per Home Assistant user.
+  - **Waste Bin Status Alert**: badge in the top right corner, driven by the `sensor_bin_full` entity (on = "Bag full", off = "Bag OK"). The alert threshold is the `cfg_bin_calibration` number entity. Both can be the Tuya entities or entities you create yourself in Home Assistant, see [Bag full alert with your own entities](#bag-full-alert-with-your-own-entities).
 - **Quick Statistics Overview**: Cleanings count, total visit counter, and duration of the last visit.
 - **Manual Control Action Buttons**: Clean, Level litter, Replace bag, Change litter ("Bag changed"), and Restart device.
 - **Status-aware effects**: the Clean, Level and Change litter buttons glow while the device is cleaning, leveling or emptying. When the bag is full, the status badge turns orange and blinks, and so does the Replace bag button. When the status is `unavailable`, the card shows the device as offline (grey halo, red status, no bag badge). Status values are recognised in English and in French (for example `cleaning` / `Nettoyage`, `smoothing` / `Lissage`, `emptying` / `Vidange`, `full` / `Plein`).
@@ -111,6 +111,7 @@ sensor_cleanings_count: sensor.cat_litter_box_number_of_cleanings
 sensor_total_visits: sensor.cat_litter_box_total_visits
 sensor_visit_duration: sensor.cat_litter_box_visit_duration
 sensor_problem: binary_sensor.cat_litter_box_probleme
+sensor_bin_full: binary_sensor.cat_litter_box_bin_full
 
 # Configuration & Settings
 cfg_auto_clean: switch.cat_litter_box_nettoyage_automatique
@@ -119,6 +120,7 @@ cfg_odor_removal: switch.cat_litter_box_odor_removal_after_cleaning
 cfg_child_lock: lock.cat_litter_box_securite_enfant
 cfg_clean_wait_time: number.cat_litter_box_clean_wait_time
 cfg_clean_interval: number.cat_litter_box_clean_interval
+cfg_bin_calibration: number.cat_litter_box_bin_full_calibration
 cfg_litter_type: select.cat_litter_box_litter_type
 cfg_unit: select.cat_litter_box_unit
 ```
@@ -142,6 +144,7 @@ cfg_unit: select.cat_litter_box_unit
 | `sensor_cat_weight` | Sensor | Cat weight value displayed in the lower circular gauge |
 | `sensor_status` | Sensor | Global status badge (*Standby, Cleaning, Sleep...*) |
 | `sensor_cleanings_count` | Sensor | Cleanings counter tile |
+| `sensor_bin_full` | Binary sensor | Waste bin alert badge (`on` = bag full). Tuya entity or your own, see [below](#bag-full-alert-with-your-own-entities) |
 | `sensor_total_visits` | Sensor | Total visits counter tile |
 | `sensor_visit_duration` | Sensor | Last visit duration tile |
 | `cfg_auto_clean` | Switch entity | Auto-clean switch toggle |
@@ -150,6 +153,7 @@ cfg_unit: select.cat_litter_box_unit
 | `cfg_child_lock` | Lock / Switch | Child lock toggle |
 | `cfg_clean_wait_time` | Number entity | Delay before cleaning (minutes) |
 | `cfg_clean_interval` | Number entity | Cleaning interval (minutes) |
+| `cfg_bin_calibration` | Number entity | Bag full threshold slider in the settings panel (cycles). Tuya entity or your own, see [below](#bag-full-alert-with-your-own-entities) |
 | `cfg_litter_type` | Select entity | Litter type selector (e.g. Mineral, Mixed) |
 | `cfg_unit` | Select entity | Weight unit selector (kg / lb) |
 | `entrance_pos_x` | Number (%) | Custom X position of the entrance halo (default: 50) |
@@ -171,6 +175,29 @@ cfg_unit: select.cat_litter_box_unit
 | `animations` | String | `on` (default) animates the drum of the litter box picture: leveling, cleaning, litter change and bag replacement. `off` turns every animation off |
 | `cat_name_1` ... `cat_name_6` | String | Name of each cat (from the lightest to the heaviest when no reference weights are set) |
 | `cat_weight_1` ... `cat_weight_6` | Number | Reference weight of each cat: a decimal number with a dot, in the unit of the weight sensor (for example `4.2`). When set for every cat, each weigh-in goes to the nearest reference, whatever the order of the names. The references then follow the cats' weight over time on their own; a weigh-in too far from every reference (a visitor) is ignored |
+
+### Bag full alert with your own entities
+
+The bag full alert does not have to depend on the thresholds Tuya imposes. `sensor_bin_full` and `cfg_bin_calibration` accept any entity, so you can create your own in Home Assistant and point the card at them:
+
+- a **Number** helper (`input_number`, for example up to 50 cycles) as `cfg_bin_calibration`: it becomes the threshold slider of the card;
+- a **template binary sensor** that turns `on` when the cleanings counter reaches that threshold, as `sensor_bin_full`.
+
+```yaml
+template:
+  - binary_sensor:
+      - name: "Litter bag full"
+        state: >
+          {{ states('sensor.cat_litter_box_number_of_cleanings') | int(0)
+             >= states('input_number.litter_bag_threshold') | int(30) }}
+```
+
+```yaml
+sensor_bin_full: binary_sensor.litter_bag_full
+cfg_bin_calibration: input_number.litter_bag_threshold
+```
+
+The Tuya cleanings counter goes back to 0 when the bag is changed, so the alert clears by itself. With a counter of your own, reset it when `btn_bag_changed` is pressed.
 
 ---
 
@@ -253,6 +280,7 @@ sensor_cleanings_count: sensor.cat_litter_box_number_of_cleanings
 sensor_total_visits: sensor.cat_litter_box_total_visits
 sensor_visit_duration: sensor.cat_litter_box_visit_duration
 sensor_problem: binary_sensor.cat_litter_box_probleme
+sensor_bin_full: binary_sensor.cat_litter_box_bin_full
 
 # Configuration & Réglages
 cfg_auto_clean: switch.cat_litter_box_nettoyage_automatique
@@ -261,6 +289,7 @@ cfg_odor_removal: switch.cat_litter_box_odor_removal_after_cleaning
 cfg_child_lock: lock.cat_litter_box_securite_enfant
 cfg_clean_wait_time: number.cat_litter_box_clean_wait_time
 cfg_clean_interval: number.cat_litter_box_clean_interval
+cfg_bin_calibration: number.cat_litter_box_bin_full_calibration
 cfg_litter_type: select.cat_litter_box_litter_type
 cfg_unit: select.cat_litter_box_unit
 ```
