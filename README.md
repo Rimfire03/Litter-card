@@ -96,7 +96,7 @@ If you find this card helpful, consider buying me a coffee to support the develo
 ```yaml
 type: custom:litter-card
 title: "Cat Litter Box"
-# language: en # (Optional: en, fr, de, es - defaults to Home Assistant language)
+# language: en # (Optional: en, fr, de, es, it, nl, pt - defaults to Home Assistant language)
 
 # Action Buttons
 btn_clean: button.cat_litter_box_clean
@@ -136,7 +136,7 @@ cfg_unit: select.cat_litter_box_unit
 | `title` | String | Card header title (default localized) |
 | `model` | String | Model preset (`doel_ti_pro_25`, `generic`) - auto-configures image & overlay coordinates |
 | `image` | String | *(Optional)* Custom image URL if you prefer not using the embedded illustration |
-| `language` | String | *(Optional)* Force language (`en`, `fr`, `de`, `es`) |
+| `language` | String | *(Optional)* Force language (`en`, `fr`, `de`, `es`, `it`, `nl`, `pt`) |
 | `btn_clean` | Button entity | Triggers cleaning cycle |
 | `btn_level` | Button entity | Levels and smooths litter bed |
 | `btn_restart` | Button entity | Restarts the device |
@@ -304,7 +304,7 @@ Option `animations` : `on` (par défaut) ou `off` pour désactiver toutes les an
 ```yaml
 type: custom:litter-card
 title: "Litière Chat"
-# language: fr # (Optionnel: fr, en, de, es - détection auto par défaut)
+# language: fr # (Optionnel: fr, en, de, es, it, nl, pt - détection auto par défaut)
 
 # Boutons d'action
 btn_clean: button.cat_litter_box_clean
