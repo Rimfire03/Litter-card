@@ -2,7 +2,7 @@ import { DEFAULT_IMAGE, MODEL_IMAGES } from './image-data.js';
 import { LITTER_MODELS, DEFAULT_MODEL_ID, getModelConfig } from './models/index.js';
 import { getCardStyles, EDITOR_STYLES } from './styles.js';
 
-const CARD_VERSION = "0.75";
+const CARD_VERSION = "0.76-dev";
 console.info(
   `%c LITTER-CARD %c v${CARD_VERSION} `,
   "color: white; background: #4caf50; font-weight: 700; border-radius: 3px 0 0 3px;",
@@ -1756,7 +1756,7 @@ class LitterCard extends HTMLElement {
           <span class="config-desc">${val} ${unit}</span>
         </div>
         <div class="slider-group">
-          <input type="range" id="${configKey}" min="${escapeHtml(minVal)}" max="${escapeHtml(maxVal)}" step="${escapeHtml(stepVal)}" value="${escapeHtml(val)}">
+          <input type="range" id="${configKey}" data-unit="${escapeHtml(unit)}" min="${escapeHtml(minVal)}" max="${escapeHtml(maxVal)}" step="${escapeHtml(stepVal)}" value="${escapeHtml(val)}">
           <span class="slider-val">${val}</span>
         </div>
       </div>
@@ -1862,6 +1862,14 @@ class LitterCard extends HTMLElement {
     sliders.forEach(key => {
       const el = root.getElementById(key);
       if (el) {
+        // live readout while dragging; the value is only sent to Home Assistant on release ("change")
+        el.addEventListener("input", (e) => {
+          const row = el.closest(".config-row");
+          const val = row?.querySelector(".slider-val");
+          const desc = row?.querySelector(".config-desc");
+          if (val) val.textContent = e.target.value;
+          if (desc) desc.textContent = `${e.target.value} ${el.dataset.unit || ""}`.trim();
+        });
         el.addEventListener("change", (e) => this._setNumber(this._config[key], e.target.value));
       }
     });
